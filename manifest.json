@@ -1,0 +1,16 @@
+{
+ "name": "Agenda Audiovida Matriz",
+ "short_name": "Agenda Audiovida",
+ "start_url": ".",
+ "display": "standalone",
+ "background_color": "#f2f6f8",
+ "theme_color": "#1f5c87",
+ "icons": [
+  {
+   "src": "icone.png",
+   "sizes": "1024x1024",
+   "type": "image/png",
+   "purpose": "any"
+  }
+ ]
+}
