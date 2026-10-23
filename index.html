@@ -212,6 +212,30 @@ h1,h1 .yr{color:#22b8aa}
 .cell .ev{font-size:0;line-height:0;height:6px;padding:0;border-radius:3px}
 .cell .more{font-size:9px;line-height:1;font-weight:700}
 }
+/* Destaque do dia */
+.today{background:linear-gradient(135deg,#1f5c87 0%,#174a6d 100%);color:#fff;border-radius:16px;padding:20px 22px 18px;box-shadow:0 14px 34px -20px rgba(31,92,135,.9);display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
+.today::before{content:"";position:absolute;inset:0 auto 0 0;width:6px;background:#2ec4b6}
+.td-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px}
+.td-k{display:inline-block;background:#2ec4b6;color:#0b2a4a;font:800 12px var(--body);letter-spacing:.12em;text-transform:uppercase;padding:3px 10px;border-radius:999px;margin-bottom:6px}
+.td-date{font-family:var(--display);font-weight:800;font-size:clamp(24px,3.4vw,34px);line-height:1.1;margin:0;color:#fff}
+.td-n{font-weight:700;font-size:14px;background:rgba(255,255,255,.14);padding:6px 12px;border-radius:999px}
+.td-body{display:flex;flex-direction:column;gap:10px}
+.td-card{background:#fff;color:var(--fg);border-radius:12px;padding:12px 14px;border-left:5px solid #2ec4b6;display:flex;flex-direction:column;gap:4px}
+.td-card .k{font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800}
+.td-card .ti{font-weight:800;font-size:17px}
+.td-card .idea{font-size:14px;color:var(--muted)}
+.td-card .per,.td-meta{font-size:12px;color:var(--muted);font-weight:600}
+.td-empty{margin:0;font-size:16px;color:rgba(255,255,255,.9)}
+.td-next{align-self:flex-start;border:0;background:rgba(255,255,255,.12);color:#fff;font:500 14px var(--body);padding:8px 14px;border-radius:10px;cursor:pointer;text-align:left}
+.td-next:hover{background:rgba(255,255,255,.2)}
+.td-add{align-self:flex-start;background:#2ec4b6;color:#0b2a4a}
+.today .edform{color:var(--fg)}
+.evact{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center}
+.actbtn{border:1px solid var(--line);background:#fff;color:#1f5c87;font:700 13px var(--body);padding:6px 12px;border-radius:8px;cursor:pointer}
+.actbtn:hover{border-color:#1f5c87}
+.actbtn.del{color:#b42318;border-color:#f3c7c3}
+.actbtn.del:hover{background:#fef3f2;border-color:#b42318}
+@media (max-width:620px){.today{padding:16px 16px 14px}.td-date{font-size:24px}}
 </style>
 </head>
 <body>
@@ -235,6 +259,7 @@ h1,h1 .yr{color:#22b8aa}
     </div>
   </header>
   <section class="panel tagmgr" id="tagmgr" hidden aria-label="Gerenciar tags"></section>
+  <section class="today" id="today" aria-label="Hoje" aria-live="polite"></section>
   <div class="filterbar"><span class="fl-label" id="flabel">Filtrar por tag</span><div class="legend" id="legend" role="group" aria-labelledby="flabel"></div></div>
   <div class="yearbar"><span class="fl-label" id="ylabel">Ano</span><div class="years" id="years" role="group" aria-labelledby="ylabel"></div></div>
   <nav class="months" id="months" aria-label="Meses"></nav>
@@ -295,7 +320,7 @@ function apply(data){
   if(only&&!TAGC[only])only=null;
   renderAll();
 }
-function renderAll(){renderLegend();render();if(!editing)renderSide();renderTagMgr();renderEditBtn()}
+function renderAll(){renderToday();renderLegend();render();if(!editing)renderSide();renderTagMgr();renderEditBtn()}
 var visible=function(k){return (byDate[k]||[]).filter(function(e){return !only||e.tag===only})};
 var yearEvents=function(){return D.datas.filter(function(e){return String(e.date).slice(0,4)==String(year)||(e.end&&e.end.slice(0,4)==String(year))})};
 
@@ -389,10 +414,40 @@ function renderSide(){
     if(dl)h+='<dl class="det">'+dl+'</dl>';
     if(e.editado)h+='<span class="who">Última edição: '+esc(e.editado)+'</span>';
     c.innerHTML=h;
-    if(canEdit()&&e.id){var act=document.createElement("div");act.className="evact";
-      var b=document.createElement("button");b.type="button";b.className="linkbtn";b.textContent="Editar";b.onclick=function(){openEditor(e,c)};act.appendChild(b);c.appendChild(act)}
+    if(canEdit()&&e.id)c.appendChild(actions(e,c));
     body.appendChild(c)});
   if(canEdit()){var add=document.createElement("button");add.type="button";add.className="btn ghost";add.textContent="+ Adicionar data neste dia";add.onclick=function(){openEditor(null,null)};body.appendChild(add)}
+}
+function actions(e,c){var act=document.createElement("div");act.className="evact";
+  var b=document.createElement("button");b.type="button";b.className="actbtn";b.textContent="✎ Editar";b.onclick=function(){openEditor(e,c)};act.appendChild(b);
+  var dw=document.createElement("span");act.appendChild(dw);
+  var del=function(){dw.innerHTML='<button class="actbtn del" type="button">🗑 Excluir</button>';dw.firstChild.onclick=function(){
+    dw.innerHTML='<span class="confirm">Excluir de vez? <button class="actbtn del" type="button" data-y>Sim, excluir</button><button class="actbtn" type="button" data-n>Não</button></span>';
+    dw.querySelector("[data-n]").onclick=del;
+    dw.querySelector("[data-y]").onclick=function(){dw.innerHTML='<span class="status">Excluindo…</span>';post({action:"delete",id:e.id}).then(function(){editing=false;renderSide();renderToday(true)}).catch(function(err){dw.innerHTML='<span class="status">'+esc(msg(err))+'</span>'})}}};
+  del();return act}
+function renderToday(force){
+  var box=$("today");if(!box)return;
+  if(!force&&box.querySelector("form"))return;
+  var t=new Date();todayKey=iso(t);
+  var evs=byDate[todayKey]||[];
+  var nome=WD[t.getDay()];nome=nome.charAt(0).toUpperCase()+nome.slice(1);
+  box.innerHTML='<div class="td-head"><div><span class="td-k">Hoje</span><h2 class="td-date">'+nome+', '+t.getDate()+' de '+MESES[t.getMonth()].toLowerCase()+' de '+t.getFullYear()+'</h2></div><span class="td-n">'+(evs.length?evs.length+(evs.length>1?" datas hoje":" data hoje"):"Nada programado hoje")+'</span></div><div class="td-body"></div>';
+  var body=box.querySelector(".td-body");
+  if(!evs.length){var p=document.createElement("p");p.className="td-empty";p.textContent="Não há nenhuma data cadastrada para hoje.";body.appendChild(p)}
+  evs.forEach(function(e){var c=document.createElement("div");c.className="td-card";c.style.borderLeftColor=color(e.tag);
+    var h='<span class="k" style="color:'+color(e.tag)+'">'+esc(e.tag||"Sem tag")+'</span><span class="ti">'+esc(e.title)+'</span>';
+    if(isSpan(e))h+='<span class="per">Período: '+short(e.date)+' a '+short(e.end)+'</span>';
+    if(e.idea)h+='<span class="idea">'+esc(e.idea)+'</span>';
+    var meta=[];if(e.status)meta.push('<span class="stat">'+esc(e.status)+'</span>');if(e.resp)meta.push('Responsável: '+esc(e.resp));
+    if(meta.length)h+='<span class="td-meta">'+meta.join(' · ')+'</span>';
+    c.innerHTML=h;if(canEdit()&&e.id)c.appendChild(actions(e,c));body.appendChild(c)});
+  var nx=null;Object.keys(byDate).sort().some(function(k){if(k>todayKey&&byDate[k].length){nx=k;return true}});
+  if(nx){var n=document.createElement("button");n.type="button";n.className="td-next";var e0=byDate[nx][0];
+    n.innerHTML='Próxima data: <b>'+short(nx)+' · '+esc(e0.title)+'</b>'+(byDate[nx].length>1?' e mais '+(byDate[nx].length-1):'')+' ›';
+    n.onclick=function(){select(nx)};body.appendChild(n)}
+  if(canEdit()){var add=document.createElement("button");add.type="button";add.className="btn td-add";add.textContent="+ Adicionar data hoje";
+    add.onclick=function(){selected=todayKey;var ph=document.createElement("div");body.insertBefore(ph,body.firstChild);openEditor(null,ph)};body.appendChild(add)}
 }
 function openEditor(e,card){
   editing=true;
@@ -413,7 +468,7 @@ function openEditor(e,card){
   v("e-tag").value=e?(TAGC[e.tag]?e.tag:""):(D.tags[0]?D.tags[0].n:"");v("e-status").value=e&&STATUS.indexOf(e.status)>=0?e.status:"A fazer";
   v("e-resp").value=e?e.resp||"":"";v("e-idea").value=e?e.idea||"":"";v("e-obs").value=e?e.obs||"":"";v("e-anexo").value=e?String(e.anexo||"").split(/\s+/).filter(Boolean).join("\n"):"";
   var st=f.querySelector(".status");
-  f.querySelector("[data-c]").onclick=function(){editing=false;renderSide()};
+  f.querySelector("[data-c]").onclick=function(){editing=false;renderSide();renderToday(true)};
   v("e-file").onchange=function(){var file=this.files[0];if(!file)return;
     if(file.size>15*1024*1024){st.textContent="O arquivo passa de 15 MB. Envie pelo Google Drive e cole o link.";this.value="";return}
     st.textContent="Enviando "+file.name+"…";var inp=this;
@@ -425,7 +480,7 @@ function openEditor(e,card){
   if(e){var dw=f.querySelector(".delwrap");var del=function(){dw.innerHTML='<button class="linkbtn" type="button">Excluir data</button>';dw.firstChild.onclick=function(){
     dw.innerHTML='<span class="confirm">Excluir de vez? <button class="linkbtn" type="button" data-y>Sim</button><button class="linkbtn" type="button" data-n>Não</button></span>';
     dw.querySelector("[data-n]").onclick=del;
-    dw.querySelector("[data-y]").onclick=function(){st.textContent="Excluindo…";post({action:"delete",id:e.id}).then(function(){editing=false;renderSide()}).catch(function(err){st.textContent=msg(err)})}}};del()}
+    dw.querySelector("[data-y]").onclick=function(){st.textContent="Excluindo…";post({action:"delete",id:e.id}).then(function(){editing=false;renderSide();renderToday(true)}).catch(function(err){st.textContent=msg(err)})}}};del()}
   f.onsubmit=function(ev){ev.preventDefault();
     var item={id:e?e.id:"",title:v("e-title").value.trim(),date:v("e-date").value,end:v("e-end").value,tag:v("e-tag").value,status:v("e-status").value,
       resp:v("e-resp").value.trim(),idea:v("e-idea").value.trim(),obs:v("e-obs").value.trim(),anexo:v("e-anexo").value.trim().split(/\s+/).filter(Boolean).join(" ")};
@@ -433,7 +488,7 @@ function openEditor(e,card){
     if(item.end&&item.end<item.date){st.textContent="A data final precisa ser depois da data inicial.";return}
     if(item.end===item.date)item.end="";
     st.textContent="Salvando…";f.querySelector("[type=submit]").disabled=true;
-    post({action:"save",item:item}).then(function(){editing=false;select(item.date)}).catch(function(err){st.textContent=msg(err);f.querySelector("[type=submit]").disabled=false})};
+    post({action:"save",item:item}).then(function(){editing=false;renderToday(true);select(item.date)}).catch(function(err){st.textContent=msg(err);f.querySelector("[type=submit]").disabled=false})};
   if(card)card.replaceWith(f);else{var body=$("sbody");body.insertBefore(f,body.firstChild);var add=body.querySelector(".btn.ghost:last-child");if(add&&add!==f)add.hidden=true}
   v("e-title").focus();
 }
