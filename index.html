@@ -20,21 +20,13 @@ img{max-width:100%}
 
 /* Layout: régua de meses no topo, grade do mês + agenda ao lado, painel do dia à direita (gaveta no celular). */
 :root{
-  --bg:#f2f6f8; --surface:#ffffff; --surface-2:#e9f0f3; --fg:#17324a; --muted:#5a5e5f; --line:#d6e1e7;
+  --bg:#ffffff; --surface:#ffffff; --surface-2:#e9f0f3; --fg:#17324a; --muted:#5a5e5f; --line:#d6e1e7;
   --brand:#1f5c87; --brand-ink:#ffffff; --brand-soft:#dce8f1; --teal:#42b5af; --teal-soft:#dcf2f0;
   --c-audicao:#0b7a8c; --c-saude:#3f8f5a; --c-comercial:#c0631c; --c-feriado:#7a6a9e; --c-aniver:#c2416b;
   --display:"Exo 2", "Segoe UI", system-ui, sans-serif;
   --body:"Figtree", "Segoe UI", system-ui, sans-serif;
   --r:10px;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0d1820; --surface:#13232f; --surface-2:#1a2f3d; --fg:#e4edf3; --muted:#9db0bc; --line:#26404f;
-  --brand:#7db4dc; --brand-ink:#0b2236; --brand-soft:#1b3449; --teal:#5ccac3; --teal-soft:#16393a;
-  --c-audicao:#4fc0d1; --c-saude:#6cc58a; --c-comercial:#f09a55; --c-feriado:#ab9bd4; --c-aniver:#ef7fa2; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#0d1820; --surface:#13232f; --surface-2:#1a2f3d; --fg:#e4edf3; --muted:#9db0bc; --line:#26404f;
-  --brand:#7db4dc; --brand-ink:#0b2236; --brand-soft:#1b3449; --teal:#5ccac3; --teal-soft:#16393a;
-  --c-audicao:#4fc0d1; --c-saude:#6cc58a; --c-comercial:#f09a55; --c-feriado:#ab9bd4; --c-aniver:#ef7fa2; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
@@ -193,6 +185,10 @@ input[type=color]{width:42px;height:38px;padding:2px;border:1px solid var(--line
 .fileline{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .stat{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--surface-2)}
 
+/* Fundo branco, cabecalho com linha verde-agua inteira e titulo verde-agua */
+.masthead::before{background:#2ec4b6}
+h1,h1 .yr{color:#22b8aa}
+.months,.years button,.chip,.panel,.masthead{background:#ffffff}
 /* Selecionados em verde-agua */
 .years button[aria-current="true"],.chip.all.on,.months button[aria-current="true"],.cell.today .d span:first-child{background:#2ec4b6!important;color:#0b2a4a!important;border-color:transparent}
 .months button[aria-current="true"] .n{color:#0b2a4a!important;opacity:.85}
