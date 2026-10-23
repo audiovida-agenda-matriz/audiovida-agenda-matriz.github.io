@@ -189,16 +189,19 @@ input[type=color]{width:42px;height:38px;padding:2px;border:1px solid var(--line
 .masthead::before{background:#2ec4b6}
 h1,h1 .yr{color:#22b8aa}
 .months,.years button,.chip,.panel,.masthead{background:#ffffff}
-/* Meses e anos: fundo azul-marinho, letra branca */
-.months{background:#0b2a4a!important;border-color:#0b2a4a!important}
-.months button{color:#ffffff}
-.months button .n{color:rgba(255,255,255,.72)}
-.months button:hover{background:rgba(255,255,255,.1)}
-.years button{background:#0b2a4a!important;color:#ffffff;border-color:#0b2a4a}
-.years button:hover{border-color:#2ec4b6}
 /* Selecionados em verde-agua */
-.years button[aria-current="true"],.chip.all.on,.months button[aria-current="true"],.cell.today .d span:first-child{background:#2ec4b6!important;color:#0b2a4a!important;border-color:transparent}
-.months button[aria-current="true"] .n{color:#0b2a4a!important;opacity:.85}
+.chip.all.on,.cell.today .d span:first-child{background:#2ec4b6!important;color:#0b2a4a!important;border-color:transparent}
+/* Meses e anos: mesma cor do botao Modo edicao, selecionado em branco */
+.months{background:#1f5c87!important;border:0!important;border-radius:14px;padding:6px;gap:6px;box-shadow:0 8px 24px -16px rgba(31,92,135,.7)}
+.months button{color:#ffffff;border-radius:10px;padding:9px 2px;transition:background .15s,color .15s}
+.months button .n{color:rgba(255,255,255,.7)}
+.months button:hover{background:rgba(255,255,255,.12)}
+.months button[aria-current="true"]{background:#ffffff!important;color:#1f5c87!important;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.months button[aria-current="true"] .n{color:#1f5c87!important;opacity:.75}
+.years{background:#1f5c87;border-radius:999px;padding:4px;gap:4px;box-shadow:0 8px 24px -16px rgba(31,92,135,.7)}
+.years button{background:transparent!important;color:#ffffff;border:0;padding:6px 18px}
+.years button:hover{background:rgba(255,255,255,.12)!important}
+.years button[aria-current="true"]{background:#ffffff!important;color:#1f5c87!important;box-shadow:0 2px 8px rgba(0,0,0,.12)}
 </style>
 </head>
 <body>
