@@ -202,6 +202,16 @@ h1,h1 .yr{color:#22b8aa}
 .years button{background:transparent!important;color:#ffffff;border:0;padding:6px 18px}
 .years button:hover{background:rgba(255,255,255,.12)!important}
 .years button[aria-current="true"]{background:#ffffff!important;color:#1f5c87!important;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+/* Celular: mes inteiro em grade (1 ao 30/31) */
+@media (max-width:620px){
+.grid{display:grid!important;padding:8px 6px 10px;gap:3px}
+.wd{font-size:10px;letter-spacing:.04em;padding:2px 0}
+.cell{min-height:52px;padding:5px 3px 4px;gap:2px;border-radius:7px}
+.cell .d{font-size:12px}
+.cell.today .d span:first-child{padding:0 5px}
+.cell .ev{font-size:0;line-height:0;height:6px;padding:0;border-radius:3px}
+.cell .more{font-size:9px;line-height:1;font-weight:700}
+}
 </style>
 </head>
 <body>
