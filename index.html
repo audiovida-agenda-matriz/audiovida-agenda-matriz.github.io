@@ -165,6 +165,32 @@ input[type=color]{width:42px;height:38px;padding:2px;border:1px solid var(--line
 .det dt{color:var(--muted);font-weight:600}
 .det dd{margin:0;white-space:pre-wrap;word-break:break-word}
 .det a{color:var(--brand);font-weight:600}
+.edform{background:var(--surface-2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.edform label{font-size:12px;font-weight:700;color:var(--muted)}
+.edform input,.edform select,.edform textarea{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;padding:8px 10px;font:inherit}
+.edform textarea{min-height:70px;resize:vertical}
+.edform .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.edform input:focus-visible,.edform select:focus-visible,.edform textarea:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+.unlock{margin-top:10px;max-width:520px}
+.btn{border:0;background:var(--brand);color:var(--brand-ink);font:700 14px var(--body);padding:9px 16px;border-radius:8px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--brand);border:1px solid var(--brand)}
+.btn[disabled]{opacity:.5;cursor:default}
+.linkbtn{border:0;background:none;color:var(--muted);font:600 12px var(--body);cursor:pointer;padding:0;text-decoration:underline}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.status{font-size:13px;color:var(--muted)}
+.confirm{display:flex;gap:8px;align-items:center;font-size:12px}
+.evact{display:flex;gap:12px;margin-top:4px}
+.who{font-size:11px;color:var(--muted)}
+.tm-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px;border-radius:8px;background:var(--surface-2)}
+.tm-row input[type=text]{flex:1 1 180px;min-width:0;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;padding:8px 10px;font:inherit}
+.tm-row input[type=color]{width:42px;height:38px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.tagmgr{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.edform input,.edform select,.edform textarea{flex:none!important}
+.tm-row{flex-direction:row!important;align-items:center!important;justify-content:flex-start}
+.tm-row input[type=text]{flex:1 1 150px!important;height:38px!important;max-height:38px}
+.tm-row .btn{flex:none}
+.chip-edit{border-style:dashed;color:var(--brand)}
+.fileline{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .stat{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--surface-2)}
 </style>
 </head>
@@ -176,12 +202,19 @@ input[type=color]{width:42px;height:38px;padding:2px;border:1px solid var(--line
       <span class="eyebrow" id="hEyebrow">Audiovida Soluções Auditivas · Planejamento</span>
       <h1><span id="hTitle">Calendário Audiovida</span> <span class="yr" id="hYr"></span></h1>
       <div class="toolbar">
-        <a class="tbtn primary" id="editlink" href="#" target="_blank" rel="noopener">✎ Editar na planilha</a>
+        <button class="tbtn primary" type="button" id="editbtn">✎ Modo edição</button>
         <button class="tbtn" type="button" id="reload">↻ Atualizar</button>
         <span class="syncnote" id="sync" aria-live="polite"></span>
       </div>
+      <form class="edform unlock" id="unlock" hidden>
+        <p class="sec-t" style="margin:0">Entrar no modo edição</p>
+        <div class="two"><div><label for="u-nome">Seu nome</label><input id="u-nome" type="text" maxlength="60" placeholder="Ex.: Eduardo" required autocomplete="name"></div>
+        <div><label for="u-pin">Código da equipe</label><input id="u-pin" type="password" maxlength="40" required autocomplete="off"></div></div>
+        <div class="row"><span class="status" id="u-st"></span><span style="display:flex;gap:8px"><button class="btn ghost" type="button" id="u-cancel">Cancelar</button><button class="btn" type="submit">Entrar</button></span></div>
+      </form>
     </div>
   </header>
+  <section class="panel tagmgr" id="tagmgr" hidden aria-label="Gerenciar tags"></section>
   <div class="filterbar"><span class="fl-label" id="flabel">Filtrar por tag</span><div class="legend" id="legend" role="group" aria-labelledby="flabel"></div></div>
   <div class="yearbar"><span class="fl-label" id="ylabel">Ano</span><div class="years" id="years" role="group" aria-labelledby="ylabel"></div></div>
   <nav class="months" id="months" aria-label="Meses"></nav>
@@ -197,62 +230,78 @@ input[type=color]{width:42px;height:38px;padding:2px;border:1px solid var(--line
       <div class="sidebody" id="sbody"></div>
     </aside>
   </div>
-  <p class="foot">Para incluir ou mudar datas, pautas, status, observações e anexos, use o botão <b>Editar na planilha</b>. O site mostra as mudanças em poucos minutos (toque em Atualizar).</p>
+  <p class="foot">Para incluir ou mudar datas, pautas, status, observações e anexos, toque em <b>✎ Modo edição</b> e use o código da equipe. As mudanças aparecem para todos.</p>
 </div>
 <script>
 (function(){
-var SHEET_ID="13WGo5uW93IuXbvZMX7jNm9JQjU1zjHsymwd0K-proFs";
+var API="https://script.google.com/macros/s/AKfycbz_NRyhczjFIbH5Ho0kitXEsymROISYlB3kAK9FtUJmVx_pzu3AXb8CUX9K6Lai53Nf/exec";
 var SNAP={"datas": [{"date": "2026-10-18", "end": "", "tag": "Datas comerciais", "title": "Dia do Médico", "idea": "Homenagem aos médicos otorrinos parceiros; reforçar o encaminhamento médico-fono.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-10-29", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Lívia Queiroz", "idea": "Post ou story de parabéns da equipe, com foto de Lívia.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-10-30", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Vera Ramos", "idea": "Post ou story de parabéns da equipe, com foto de Vera.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-11-01", "end": "", "tag": "Saúde e 60+", "title": "Novembro Azul", "idea": "Saúde do homem: incluir a audição no check-up.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-11-02", "end": "", "tag": "Feriados", "title": "Finados", "idea": "Aviso de horário de funcionamento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-11-10", "end": "", "tag": "Saúde auditiva", "title": "Dia Nacional de Prevenção e Combate à Surdez", "idea": "Segunda data mais forte do ano. Mutirão de triagem e conteúdo de prevenção.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-11-14", "end": "", "tag": "Saúde e 60+", "title": "Dia Mundial do Diabetes", "idea": "Diabetes e perda auditiva: relação e importância do acompanhamento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-11-15", "end": "2026-11-30", "tag": "Campanhas e produtos", "title": "Campanha Black Friday · INSERA S7-R", "idea": "Campanha de 15 a 30 de novembro com o INSERA S7-R (Linha 7) como produto principal: condições especiais em aparelhos auditivos, esquenta da base de leads, anúncios e disparos no WhatsApp.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-11-15", "end": "", "tag": "Feriados", "title": "Proclamação da República", "idea": "Aviso de horário de funcionamento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-11-15", "end": "2026-11-30", "tag": "Campanhas e produtos", "title": "Produto em destaque: Linha 7 · INSERA S7-R (Black Friday)", "idea": "Oferta do INSERA S7-R (Linha 7) durante a Black Friday 2026, de 15 a 30/11: criativos do produto, comparativo com a linha anterior, depoimentos e condição de pagamento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-11-19", "end": "", "tag": "Reuniões e treinamentos", "title": "Reunião de Fonoaudiologia · 18h30", "idea": "Reunião bimestral da equipe de fonoaudiologia (quinta-feira da penúltima semana do mês, 18h30). Bom momento para alinhar pautas de conteúdo técnico com as fonos.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-11-20", "end": "", "tag": "Feriados", "title": "Dia da Consciência Negra", "idea": "Aviso de horário de funcionamento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-11-22", "end": "", "tag": "Saúde auditiva", "title": "Dia do Músico", "idea": "Proteção auditiva para músicos e quem frequenta shows: protetores sob medida.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-11-23", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Gláucia Massi", "idea": "Post ou story de parabéns da equipe, com foto de Gláucia.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-11-26", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Priscilla Suellen", "idea": "Post ou story de parabéns da equipe, com foto de Priscilla.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-11-27", "end": "", "tag": "Datas comerciais", "title": "Black Friday", "idea": "Condições especiais em aparelhos auditivos e acessórios. Esquentar a base de leads na semana anterior.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-11-30", "end": "", "tag": "Datas comerciais", "title": "Cyber Monday", "idea": "Última chamada das ofertas de Black Friday, com foco em agendamento online e WhatsApp.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-12-03", "end": "", "tag": "Saúde auditiva", "title": "Dia Internacional da Pessoa com Deficiência", "idea": "Acessibilidade e direitos da pessoa com deficiência auditiva.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-12-03", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Paula Falcão", "idea": "Post ou story de parabéns da equipe, com foto de Paula.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-12-09", "end": "", "tag": "Saúde auditiva", "title": "Dia do Fonoaudiólogo", "idea": "Homenagem às fonoaudiólogas da Audiovida, com bastidores do atendimento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-12-20", "end": "", "tag": "Datas comerciais", "title": "Revisão de fim de ano dos aparelhos", "idea": "Chamada para limpeza e revisão dos aparelhos antes das festas e das férias.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-12-25", "end": "", "tag": "Datas comerciais", "title": "Natal", "idea": "Ouvir as vozes da família na ceia. Mensagem de Natal da equipe.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2026-12-31", "end": "", "tag": "Datas comerciais", "title": "Réveillon", "idea": "Retrospectiva 2027 e agradecimento aos pacientes.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-01-01", "end": "", "tag": "Feriados", "title": "Confraternização Universal", "idea": "Mensagem de Ano Novo da equipe Audiovida, desejando um ano de boas conversas.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-01-01", "end": "", "tag": "Saúde e 60+", "title": "Janeiro Branco", "idea": "Série sobre como a perda auditiva afeta humor, isolamento e saúde mental.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-01-14", "end": "", "tag": "Reuniões e treinamentos", "title": "Capacitação das recepcionistas", "idea": "Treinamento trimestral da recepção: atendimento, agendamento e alinhamento com as campanhas do trimestre.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-01-20", "end": "", "tag": "Feriados", "title": "São Sebastião (feriado no Rio)", "idea": "Aviso de horário das unidades no feriado municipal.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-01-21", "end": "", "tag": "Reuniões e treinamentos", "title": "Reunião de Fonoaudiologia · 18h30", "idea": "Reunião bimestral da equipe de fonoaudiologia (quinta-feira da penúltima semana do mês, 18h30). Bom momento para alinhar pautas de conteúdo técnico com as fonos.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-01-24", "end": "", "tag": "Saúde e 60+", "title": "Dia Nacional do Aposentado", "idea": "Conteúdo para o público 60+: aposentadoria ativa, convivência e o papel da boa audição na qualidade de vida.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-02-01", "end": "", "tag": "Saúde auditiva", "title": "Semana de Conscientização sobre o Zumbido (1ª semana)", "idea": "Carrossel: o que é zumbido, causas comuns e quando procurar avaliação.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-02-07", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Cristiane Peixoto", "idea": "Post ou story de parabéns da equipe, com foto de Cristiane.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-02-08", "end": "", "tag": "Feriados", "title": "Segunda de Carnaval", "idea": "Aviso de funcionamento das unidades.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-02-09", "end": "", "tag": "Feriados", "title": "Terça de Carnaval", "idea": "Post: aproveite o bloco protegendo os ouvidos. Dicas de distância das caixas de som e protetor.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-02-10", "end": "", "tag": "Feriados", "title": "Quarta-feira de Cinzas", "idea": "Pós-Carnaval: ouvido abafado ou zumbido depois da folia? Convite para avaliação.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-02-25", "end": "", "tag": "Saúde auditiva", "title": "Dia Internacional do Implante Coclear", "idea": "Explicar a diferença entre aparelho auditivo e implante coclear, e quando cada um é indicado.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-02-28", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Yasmin Madureira", "idea": "Post ou story de parabéns da equipe, com foto de Yasmin.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-03-03", "end": "", "tag": "Saúde auditiva", "title": "Dia Mundial da Audição (OMS)", "idea": "Data principal do ano. Campanha de triagem auditiva gratuita, depoimentos e conteúdo da OMS.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-03-08", "end": "", "tag": "Datas comerciais", "title": "Dia Internacional da Mulher", "idea": "Homenagem às mulheres da equipe e às pacientes. Histórias reais de reconexão.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-03-15", "end": "", "tag": "Datas comerciais", "title": "Dia do Consumidor", "idea": "Condição especial em aparelhos ou manutenção gratuita na semana.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-03-18", "end": "", "tag": "Reuniões e treinamentos", "title": "Reunião de Fonoaudiologia · 18h30", "idea": "Reunião bimestral da equipe de fonoaudiologia (quinta-feira da penúltima semana do mês, 18h30). Bom momento para alinhar pautas de conteúdo técnico com as fonos.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-03-26", "end": "", "tag": "Feriados", "title": "Sexta-feira Santa", "idea": "Aviso de horário de funcionamento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-03-27", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Tatiana Fragoso", "idea": "Post ou story de parabéns da equipe, com foto de Tatiana.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-03-28", "end": "", "tag": "Datas comerciais", "title": "Páscoa", "idea": "Mensagem de renovação: ouvir de novo os sons da família reunida.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-04-07", "end": "", "tag": "Saúde e 60+", "title": "Dia Mundial da Saúde", "idea": "Audição também é saúde: checklist de cuidados anuais.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-04-08", "end": "", "tag": "Reuniões e treinamentos", "title": "Capacitação das recepcionistas", "idea": "Treinamento trimestral da recepção: atendimento, agendamento e alinhamento com as campanhas do trimestre.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-04-21", "end": "", "tag": "Feriados", "title": "Tiradentes", "idea": "Aviso de horário de funcionamento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-04-23", "end": "", "tag": "Feriados", "title": "São Jorge (feriado no RJ)", "idea": "Aviso de horário de funcionamento no feriado estadual.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-04-24", "end": "", "tag": "Saúde auditiva", "title": "Dia Nacional da Libras", "idea": "Ensine 3 sinais básicos em Libras em Reels. Reforça inclusão.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-04-26", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Patrícia Reis", "idea": "Post ou story de parabéns da equipe, com foto de Patrícia.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-04-28", "end": "", "tag": "Saúde auditiva", "title": "Dia Internacional de Conscientização sobre o Ruído", "idea": "Teste interativo: quantos decibéis tem o seu dia? Fone, trânsito, obra.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-05-01", "end": "", "tag": "Feriados", "title": "Dia do Trabalho", "idea": "Ruído no trabalho e saúde auditiva ocupacional.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-05-02", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Jackson Santos", "idea": "Post ou story de parabéns da equipe, com foto de Jackson.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-05-08", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Leandro Ramos", "idea": "Post ou story de parabéns da equipe, com foto de Leandro.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-05-09", "end": "", "tag": "Datas comerciais", "title": "Dia das Mães", "idea": "Campanha: o melhor presente é voltar a ouvir a voz dos filhos. Agende a avaliação da sua mãe.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-05-20", "end": "", "tag": "Reuniões e treinamentos", "title": "Reunião de Fonoaudiologia · 18h30", "idea": "Reunião bimestral da equipe de fonoaudiologia (quinta-feira da penúltima semana do mês, 18h30). Bom momento para alinhar pautas de conteúdo técnico com as fonos.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-05-27", "end": "", "tag": "Feriados", "title": "Corpus Christi (ponto facultativo)", "idea": "Aviso de horário de funcionamento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-06-03", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Evellyn Nagasse", "idea": "Post ou story de parabéns da equipe, com foto de Evellyn.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-06-12", "end": "", "tag": "Datas comerciais", "title": "Dia dos Namorados", "idea": "Escutar quem a gente ama. Depoimento de casal paciente.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-06-15", "end": "", "tag": "Datas comerciais", "title": "Mês de revisão: troca de pilhas e acessórios", "idea": "Lembrete de manutenção: pilhas, filtros, cúpulas e carregadores. Ação de pós-venda para a base de clientes.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-06-23", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Elaine Brinhosa", "idea": "Post ou story de parabéns da equipe, com foto de Elaine.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-06-24", "end": "", "tag": "Datas comerciais", "title": "Festas Juninas (São João)", "idea": "Conteúdo leve e regional: arraiá com som alto? Cuidados com caixas de som.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-06-29", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Deise Figueiredo", "idea": "Post ou story de parabéns da equipe, com foto de Deise.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-07-08", "end": "", "tag": "Reuniões e treinamentos", "title": "Capacitação das recepcionistas", "idea": "Treinamento trimestral da recepção: atendimento, agendamento e alinhamento com as campanhas do trimestre.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-07-22", "end": "", "tag": "Reuniões e treinamentos", "title": "Reunião de Fonoaudiologia · 18h30", "idea": "Reunião bimestral da equipe de fonoaudiologia (quinta-feira da penúltima semana do mês, 18h30). Bom momento para alinhar pautas de conteúdo técnico com as fonos.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-07-26", "end": "", "tag": "Saúde e 60+", "title": "Dia dos Avós", "idea": "Campanha netos + avós: traga seu avô ou avó para uma avaliação auditiva.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-07-29", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Luana Maurity", "idea": "Post ou story de parabéns da equipe, com foto de Luana.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-08-02", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Rodrigo de Souza", "idea": "Post ou story de parabéns da equipe, com foto de Rodrigo.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-08-05", "end": "", "tag": "Saúde e 60+", "title": "Dia Nacional da Saúde", "idea": "Prevenção: com que frequência fazer audiometria após os 50.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-08-08", "end": "", "tag": "Datas comerciais", "title": "Dia dos Pais", "idea": "Homem demora mais a procurar ajuda. Convite para o pai fazer a avaliação.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-08-31", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Jady Costa", "idea": "Post ou story de parabéns da equipe, com foto de Jady.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-09-01", "end": "", "tag": "Saúde auditiva", "title": "Setembro Azul (mês da comunidade surda)", "idea": "Série do mês sobre inclusão, cultura surda e acessibilidade.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-09-07", "end": "", "tag": "Feriados", "title": "Independência do Brasil", "idea": "Aviso de horário de funcionamento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-09-15", "end": "", "tag": "Datas comerciais", "title": "Dia do Cliente", "idea": "Agradecimento aos pacientes, depoimentos e condição especial de revisão/manutenção dos aparelhos.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-09-21", "end": "", "tag": "Saúde e 60+", "title": "Dia Mundial da Doença de Alzheimer", "idea": "Estudos associam a perda auditiva não tratada ao maior risco de declínio cognitivo. Conteúdo educativo, sem alarmismo.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-09-23", "end": "", "tag": "Saúde auditiva", "title": "Dia Internacional das Línguas de Sinais", "idea": "Reels com fonoaudióloga explicando a importância da Libras.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-09-23", "end": "", "tag": "Reuniões e treinamentos", "title": "Reunião de Fonoaudiologia · 18h30", "idea": "Reunião bimestral da equipe de fonoaudiologia (quinta-feira da penúltima semana do mês, 18h30). Bom momento para alinhar pautas de conteúdo técnico com as fonos.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-09-26", "end": "", "tag": "Saúde auditiva", "title": "Dia Nacional do Surdo", "idea": "Homenagem e conteúdo de conscientização. Evitar tom de venda nesta data.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-09-27", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Jose Eduardo", "idea": "Post ou story de parabéns da equipe, com foto de Jose.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-10-01", "end": "", "tag": "Saúde e 60+", "title": "Dia Internacional da Pessoa Idosa", "idea": "Autonomia e convivência: como a audição mantém a independência na terceira idade.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-10-01", "end": "", "tag": "Saúde e 60+", "title": "Outubro Rosa", "idea": "Apoio à campanha de prevenção do câncer de mama, com o tema cuidado integral.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-10-03", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Catia Regina", "idea": "Post ou story de parabéns da equipe, com foto de Catia.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-10-10", "end": "", "tag": "Saúde e 60+", "title": "Dia Mundial da Saúde Mental", "idea": "Isolamento social e perda auditiva: como ouvir bem ajuda a manter a vida social ativa.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-10-12", "end": "", "tag": "Feriados", "title": "Nossa Senhora Aparecida / Dia das Crianças", "idea": "Aviso de horário. Conteúdo sobre triagem auditiva infantil e teste da orelhinha.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-10-14", "end": "", "tag": "Reuniões e treinamentos", "title": "Capacitação das recepcionistas", "idea": "Treinamento trimestral da recepção: atendimento, agendamento e alinhamento com as campanhas do trimestre.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-10-18", "end": "", "tag": "Datas comerciais", "title": "Dia do Médico", "idea": "Homenagem aos médicos otorrinos parceiros; reforçar o encaminhamento médico-fono.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-10-29", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Lívia Queiroz", "idea": "Post ou story de parabéns da equipe, com foto de Lívia.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-10-30", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Vera Ramos", "idea": "Post ou story de parabéns da equipe, com foto de Vera.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-11-01", "end": "", "tag": "Saúde e 60+", "title": "Novembro Azul", "idea": "Saúde do homem: incluir a audição no check-up.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-11-02", "end": "", "tag": "Feriados", "title": "Finados", "idea": "Aviso de horário de funcionamento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-11-10", "end": "", "tag": "Saúde auditiva", "title": "Dia Nacional de Prevenção e Combate à Surdez", "idea": "Segunda data mais forte do ano. Mutirão de triagem e conteúdo de prevenção.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-11-14", "end": "", "tag": "Saúde e 60+", "title": "Dia Mundial do Diabetes", "idea": "Diabetes e perda auditiva: relação e importância do acompanhamento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-11-15", "end": "2027-11-30", "tag": "Campanhas e produtos", "title": "Campanha Black Friday", "idea": "Campanha de 15 a 30 de novembro: condições especiais em aparelhos auditivos, esquenta da base de leads, anúncios e disparos no WhatsApp.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-11-15", "end": "", "tag": "Feriados", "title": "Proclamação da República", "idea": "Aviso de horário de funcionamento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-11-18", "end": "", "tag": "Reuniões e treinamentos", "title": "Reunião de Fonoaudiologia · 18h30", "idea": "Reunião bimestral da equipe de fonoaudiologia (quinta-feira da penúltima semana do mês, 18h30). Bom momento para alinhar pautas de conteúdo técnico com as fonos.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-11-20", "end": "", "tag": "Feriados", "title": "Dia da Consciência Negra", "idea": "Aviso de horário de funcionamento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-11-22", "end": "", "tag": "Saúde auditiva", "title": "Dia do Músico", "idea": "Proteção auditiva para músicos e quem frequenta shows: protetores sob medida.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-11-23", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Gláucia Massi", "idea": "Post ou story de parabéns da equipe, com foto de Gláucia.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-11-26", "end": "", "tag": "Datas comerciais", "title": "Black Friday", "idea": "Condições especiais em aparelhos auditivos e acessórios. Esquentar a base de leads na semana anterior.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-11-26", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Priscilla Suellen", "idea": "Post ou story de parabéns da equipe, com foto de Priscilla.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-11-29", "end": "", "tag": "Datas comerciais", "title": "Cyber Monday", "idea": "Última chamada das ofertas de Black Friday, com foco em agendamento online e WhatsApp.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-12-03", "end": "", "tag": "Saúde auditiva", "title": "Dia Internacional da Pessoa com Deficiência", "idea": "Acessibilidade e direitos da pessoa com deficiência auditiva.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-12-03", "end": "", "tag": "Aniversários da equipe", "title": "Aniversário: Paula Falcão", "idea": "Post ou story de parabéns da equipe, com foto de Paula.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-12-09", "end": "", "tag": "Saúde auditiva", "title": "Dia do Fonoaudiólogo", "idea": "Homenagem às fonoaudiólogas da Audiovida, com bastidores do atendimento.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-12-20", "end": "", "tag": "Datas comerciais", "title": "Revisão de fim de ano dos aparelhos", "idea": "Chamada para limpeza e revisão dos aparelhos antes das festas e das férias.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-12-25", "end": "", "tag": "Datas comerciais", "title": "Natal", "idea": "Ouvir as vozes da família na ceia. Mensagem de Natal da equipe.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}, {"date": "2027-12-31", "end": "", "tag": "Datas comerciais", "title": "Réveillon", "idea": "Retrospectiva 2027 e agradecimento aos pacientes.", "status": "A fazer", "resp": "", "obs": "", "anexo": ""}], "tags": [{"n": "Saúde auditiva", "color": "#0b7a8c"}, {"n": "Saúde e 60+", "color": "#3f8f5a"}, {"n": "Datas comerciais", "color": "#c0631c"}, {"n": "Feriados", "color": "#7a6a9e"}, {"n": "Aniversários da equipe", "color": "#c2416b"}, {"n": "Reuniões e treinamentos", "color": "#2a7de1"}, {"n": "Campanhas e produtos", "color": "#e0a400"}], "temas": ["Janeiro Branco: saúde mental e bem-estar. Abra o ano com metas de cuidado, incluindo a audição.", "Mês do Carnaval e da Semana do Zumbido: ruído alto, protetor auricular e sinais de alerta.", "Mês da Audição: Dia Mundial da Audição (3/3) é a data-âncora do ano. Campanha de triagem auditiva.", "Libras, ruído e Dia Mundial da Saúde: conteúdo educativo e prevenção.", "Mês das Mães: presente de cuidado, convite para levar a mãe à avaliação auditiva.", "Namorados e festas juninas: conexão, conversa e escutar quem a gente ama.", "Férias e Dia dos Avós (26/7): netos levando avós para a avaliação.", "Mês dos Pais e Dia Nacional da Saúde: cuidado masculino com a audição.", "Setembro Azul: mês da comunidade surda. Inclusão, Libras e acessibilidade.", "Mês da Pessoa Idosa e Outubro Rosa: autonomia e qualidade de vida.", "Novembro Azul, Dia de Combate à Surdez (10/11) e Black Friday: prevenção + condições especiais.", "Dia do Fonoaudiólogo (9/12) e fim de ano: bastidores da equipe, festas e retrospectiva."], "config": {"title": "Calendário Audiovida", "eyebrow": "Audiovida Soluções Auditivas · Planejamento", "brand": "#1f5c87"}};
 var MESES=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 var WD=["domingo","segunda-feira","terça-feira","quarta-feira","quinta-feira","sexta-feira","sábado"];
+var STATUS=["A fazer","Em produção","Aprovado","Publicado","Cancelado"];
 var pad=function(n){return String(n).padStart(2,"0")};
 var iso=function(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
 var parse=function(k){var a=k.split("-").map(Number);return new Date(a[0],a[1]-1,a[2])};
 var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
+var $=function(id){return document.getElementById(id)};
 function ink(hex){var m=/^#?([0-9a-f]{6})$/i.exec(hex||"");if(!m)return "#fff";var n=parseInt(m[1],16);
   var L=[n>>16&255,n>>8&255,n&255].map(function(v){v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});
   return (.2126*L[0]+.7152*L[1]+.0722*L[2])>.4?"#10292e":"#ffffff"}
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}}
+
 var D={datas:[],tags:[],temas:[],config:{}},byDate={},TAGC={};
 var now=new Date(),todayKey=iso(now);
 var year=now.getFullYear(),month=now.getMonth(),selected=todayKey,only=null,YMIN=year,YMAX=year;
+var auth={nome:store("agv_nome")||"",pin:store("agv_pin")||""};
+var editing=false,tagMgrOpen=false;
+var canEdit=function(){return !!(API&&auth.pin)};
 var color=function(t){return TAGC[t]||"#7f8c8d"};
 var short=function(k){var d=parse(k);return d.getDate()+"/"+MESES[d.getMonth()].slice(0,3).toLowerCase()};
 var isSpan=function(e){return e.end&&e.end>e.date};
 
 function apply(data){
-  D=data;TAGC={};D.tags.forEach(function(t){TAGC[t.n]=t.color});
-  byDate={};var ys=[];
-  D.datas.forEach(function(e){if(!e.date)return;ys.push(+e.date.slice(0,4));
+  D=data;TAGC={};D.tags.forEach(function(t){TAGC[t.n]=/^#[0-9a-f]{6}$/i.test(t.color)?t.color:"#7f8c8d"});
+  byDate={};var ys=[now.getFullYear()];
+  D.datas.forEach(function(e){if(!/^\d{4}-\d\d-\d\d$/.test(e.date||""))return;ys.push(+e.date.slice(0,4));
     if(isSpan(e)){var d=parse(e.date),end=parse(e.end),n=0;while(d<=end&&n<400){var k=iso(d);(byDate[k]=byDate[k]||[]).push(e);d.setDate(d.getDate()+1);n++}}
     else (byDate[e.date]=byDate[e.date]||[]).push(e)});
-  Object.keys(byDate).forEach(function(k){byDate[k].sort(function(a,b){return (a.tag==="Aniversários da equipe")-(b.tag==="Aniversários da equipe")||a.title.localeCompare(b.title)})});
-  if(ys.length){YMIN=Math.min.apply(null,ys);YMAX=Math.max.apply(null,ys)}
+  Object.keys(byDate).forEach(function(k){byDate[k].sort(function(a,b){return (a.tag==="Aniversários da equipe")-(b.tag==="Aniversários da equipe")||String(a.title).localeCompare(String(b.title))})});
+  YMIN=Math.min.apply(null,ys);YMAX=Math.max.apply(null,ys);
   if(year<YMIN){year=YMIN;month=0}if(year>YMAX){year=YMAX;month=0}
   var c=D.config||{};
-  if(c.title)document.getElementById("hTitle").textContent=c.title;
-  if(c.eyebrow)document.getElementById("hEyebrow").textContent=c.eyebrow;
+  if(c.title)$("hTitle").textContent=c.title;
+  if(c.eyebrow)$("hEyebrow").dataset.base=c.eyebrow;
   if(/^#[0-9a-f]{6}$/i.test(c.brand||"")){document.documentElement.style.setProperty("--brand",c.brand);document.documentElement.style.setProperty("--brand-ink",ink(c.brand))}
   if(only&&!TAGC[only])only=null;
-  renderLegend();render();renderSide();
+  renderAll();
 }
+function renderAll(){renderLegend();render();if(!editing)renderSide();renderTagMgr();renderEditBtn()}
 var visible=function(k){return (byDate[k]||[]).filter(function(e){return !only||e.tag===only})};
-var yearEvents=function(){return D.datas.filter(function(e){return e.date.slice(0,4)==String(year)||(e.end&&e.end.slice(0,4)==String(year))})};
+var yearEvents=function(){return D.datas.filter(function(e){return String(e.date).slice(0,4)==String(year)||(e.end&&e.end.slice(0,4)==String(year))})};
 
+function renderEditBtn(){
+  var b=$("editbtn");
+  if(!API){b.hidden=true;return}
+  b.textContent=canEdit()?"✓ Editando como "+(auth.nome||"equipe")+" · Sair":"✎ Modo edição";
+  b.classList.toggle("primary",!canEdit());
+}
 function renderLegend(){
-  var el=document.getElementById("legend");el.innerHTML="";
+  var el=$("legend");el.innerHTML="";
   var ye=yearEvents(),cnt={};ye.forEach(function(e){cnt[e.tag]=(cnt[e.tag]||0)+1});
   var all=document.createElement("button");all.type="button";all.className="chip all"+(only?"":" on");all.setAttribute("aria-pressed",!only);
   all.innerHTML='Todas <span class="n">'+ye.length+'</span>';all.onclick=function(){only=null;renderLegend();render()};el.appendChild(all);
   D.tags.forEach(function(t){var on=only===t.n;
     var b=document.createElement("button");b.type="button";b.className="chip"+(on?" on":"");b.setAttribute("aria-pressed",on);
     b.innerHTML='<span class="dot"></span><span class="t"></span><span class="n"></span>';
-    b.querySelector(".dot").style.background=on?"#fff":t.color;b.querySelector(".t").textContent=t.n;b.querySelector(".n").textContent=cnt[t.n]||0;
-    if(on){b.style.background=t.color;b.style.color=ink(t.color)}
+    b.querySelector(".dot").style.background=on?"#fff":color(t.n);b.querySelector(".t").textContent=t.n;b.querySelector(".n").textContent=cnt[t.n]||0;
+    if(on){b.style.background=color(t.n);b.style.color=ink(color(t.n))}
     b.title=on?"Mostrar todas as tags":"Mostrar só "+t.n;
     b.onclick=function(){only=on?null:t.n;renderLegend();render()};el.appendChild(b)});
+  if(canEdit()){var t=document.createElement("button");t.type="button";t.className="chip chip-edit";t.textContent=tagMgrOpen?"Fechar edição de tags":"✎ Editar tags";
+    t.onclick=function(){tagMgrOpen=!tagMgrOpen;renderLegend();renderTagMgr()};el.appendChild(t)}
 }
 function renderYears(){
-  var el=document.getElementById("years");el.innerHTML="";
+  var el=$("years");el.innerHTML="";
   for(var y=YMIN;y<=YMAX;y++)(function(y){var b=document.createElement("button");b.type="button";b.textContent=y;b.setAttribute("aria-current",y===year);
     b.onclick=function(){if(y===year)return;year=y;month=(y===now.getFullYear())?now.getMonth():0;renderLegend();render()};el.appendChild(b)})(y);
   document.querySelector(".yearbar").hidden=YMIN===YMAX;
@@ -260,16 +309,16 @@ function renderYears(){
 function key(m,d){return year+"-"+pad(m+1)+"-"+pad(d)}
 function render(){
   renderYears();
-  document.getElementById("hYr").textContent=year;
-  var eb=document.getElementById("hEyebrow");eb.textContent=eb.textContent.replace(/\b20\d\d\b/g,String(year));
-  document.title=document.getElementById("hTitle").textContent+" "+year;
-  var mel=document.getElementById("months");mel.innerHTML="";
+  $("hYr").textContent=year;
+  var eb=$("hEyebrow");if(!eb.dataset.base)eb.dataset.base=eb.textContent;eb.textContent=eb.dataset.base.replace(/\b20\d\d\b/g,String(year));
+  document.title=$("hTitle").textContent+" "+year;
+  var mel=$("months");mel.innerHTML="";
   MESES.forEach(function(m,i){var seen=new Set();for(var d=1;d<=31;d++)visible(key(i,d)).forEach(function(e){seen.add(e)});
     var b=document.createElement("button");b.type="button";b.setAttribute("aria-current",i===month);
     b.innerHTML=m.slice(0,3)+'<span class="n">'+seen.size+' datas</span>';b.onclick=function(){month=i;render()};mel.appendChild(b)});
-  document.getElementById("mtitle").textContent=MESES[month]+" "+year;
-  document.getElementById("theme").textContent=D.temas[month]||"";
-  var g=document.getElementById("grid");g.innerHTML="";
+  $("mtitle").textContent=MESES[month]+" "+year;
+  renderTheme();
+  var g=$("grid");g.innerHTML="";
   ["dom","seg","ter","qua","qui","sex","sáb"].forEach(function(w){var x=document.createElement("div");x.className="wd";x.textContent=w;g.appendChild(x)});
   var first=new Date(year,month,1).getDay(),days=new Date(year,month+1,0).getDate();
   for(var i=0;i<first;i++){var o=document.createElement("div");o.className="cell out";g.appendChild(o)}
@@ -277,25 +326,37 @@ function render(){
     var c=document.createElement("button");c.type="button";c.className="cell"+(k===selected?" sel":"")+(k===todayKey?" today":"");
     c.setAttribute("aria-label",d+" de "+MESES[month]+(evs.length?", "+evs.length+" datas":""));
     var h='<div class="d"><span>'+d+'</span></div>';
-    evs.slice(0,2).forEach(function(e){h+='<div class="ev'+(isSpan(e)?' span':'')+'" style="background:'+color(e.tag)+';color:'+ink(color(e.tag))+'">'+esc(e.title.replace("Aniversário: ","🎂 "))+'</div>'});
+    evs.slice(0,2).forEach(function(e){h+='<div class="ev'+(isSpan(e)?' span':'')+'" style="background:'+color(e.tag)+';color:'+ink(color(e.tag))+'">'+esc(String(e.title).replace("Aniversário: ","🎂 "))+'</div>'});
     if(evs.length>2)h+='<div class="more">+'+(evs.length-2)+'</div>';
     c.innerHTML=h;c.onclick=function(){select(k)};g.appendChild(c)})(d);
-  var a=document.getElementById("agenda");a.innerHTML="";var any=false,shown=new Set();
+  var a=$("agenda");a.innerHTML="";var any=false,shown=new Set();
   for(var d2=1;d2<=days;d2++)(function(d){var k=key(month,d),wd=WD[new Date(year,month,d).getDay()];
     visible(k).forEach(function(e){if(shown.has(e))return;shown.add(e);any=true;
       var li=document.createElement("li"),b=document.createElement("button");b.type="button";
-      b.innerHTML='<span class="day">'+pad(d)+'<small>'+wd+'</small></span><span><span class="t">'+esc(e.title)+'</span><br>'+(isSpan(e)?'<span class="range">'+short(e.date)+' a '+short(e.end)+' · </span>':'')+'<span class="cat">'+esc(e.tag||"Sem tag")+'</span></span><span class="bar" style="background:'+color(e.tag)+'"></span>';
+      b.innerHTML='<span class="day">'+pad(d)+'<small>'+wd+'</small></span><span><span class="t">'+esc(e.title)+'</span><br>'+(isSpan(e)?'<span class="range">'+short(e.date)+' a '+short(e.end)+' · </span>':'')+'<span class="cat">'+esc(e.tag||"Sem tag")+(e.status?' · '+esc(e.status):'')+'</span></span><span class="bar" style="background:'+color(e.tag)+'"></span>';
       b.onclick=function(){select(k)};li.appendChild(b);a.appendChild(li)})})(d2);
   if(!any)a.innerHTML='<li class="empty" style="padding:8px">Nenhuma data neste mês com os filtros atuais.</li>';
 }
-function select(k){selected=k;var y=+k.slice(0,4);if(y!==year){year=y;renderLegend()}month=+k.slice(5,7)-1;render();renderSide();
-  if(window.innerWidth<=900)document.getElementById("side").scrollIntoView({behavior:"smooth",block:"start"})}
+function renderTheme(){
+  var el=$("theme");el.innerHTML="";var sp=document.createElement("span");sp.textContent=D.temas[month]||"";el.appendChild(sp);
+  if(!canEdit())return;
+  var b=document.createElement("button");b.type="button";b.className="linkbtn";b.textContent="Editar tema do mês";b.style.marginLeft="8px";
+  b.onclick=function(){var f=document.createElement("form");f.className="edform";
+    f.innerHTML='<label for="tm-txt">Tema de '+MESES[month]+'</label><textarea id="tm-txt" maxlength="500"></textarea><div class="row"><span class="status"></span><span style="display:flex;gap:8px"><button class="btn ghost" type="button" data-c>Cancelar</button><button class="btn" type="submit">Salvar</button></span></div>';
+    f.querySelector("textarea").value=D.temas[month]||"";f.querySelector("[data-c]").onclick=renderTheme;
+    f.onsubmit=function(ev){ev.preventDefault();var st=f.querySelector(".status");st.textContent="Salvando…";
+      post({action:"tema",month:month,text:f.querySelector("textarea").value.trim()}).then(function(){}).catch(function(e){st.textContent=msg(e)})};
+    el.innerHTML="";el.appendChild(f);f.querySelector("textarea").focus()};
+  el.appendChild(b);
+}
+function select(k){editing=false;selected=k;var y=+k.slice(0,4);if(y!==year){year=y;renderLegend()}month=+k.slice(5,7)-1;render();renderSide();
+  if(window.innerWidth<=900)$("side").scrollIntoView({behavior:"smooth",block:"start"})}
+function fmtLong(k){var a=k.split("-").map(Number);return WD[new Date(a[0],a[1]-1,a[2]).getDay()]+", "+a[2]+" de "+MESES[a[1]-1].toLowerCase()+" de "+a[0]}
 function renderSide(){
-  var a=selected.split("-").map(Number);
-  document.getElementById("stitle").textContent=WD[new Date(a[0],a[1]-1,a[2]).getDay()]+", "+a[2]+" de "+MESES[a[1]-1].toLowerCase()+" de "+a[0];
-  var body=document.getElementById("sbody");body.innerHTML="";
+  $("stitle").textContent=fmtLong(selected);
+  var body=$("sbody");body.innerHTML="";
   var evs=byDate[selected]||[];
-  if(!evs.length){body.innerHTML='<p class="empty">Sem data cadastrada neste dia. Para incluir, use <b>Editar na planilha</b>.</p>';return}
+  if(!evs.length){var p=document.createElement("p");p.className="empty";p.textContent=canEdit()?"Sem data cadastrada neste dia.":"Sem data cadastrada neste dia. Para incluir, toque em ✎ Modo edição.";body.appendChild(p)}
   evs.forEach(function(e){var c=document.createElement("div");c.className="evcard";c.style.borderColor=color(e.tag);
     var h='<span class="k" style="color:'+color(e.tag)+'">'+esc(e.tag||"Sem tag")+'</span><span class="ti">'+esc(e.title)+'</span>';
     if(isSpan(e))h+='<span class="per">Período: '+short(e.date)+' a '+short(e.end)+'</span>';
@@ -304,41 +365,107 @@ function renderSide(){
     if(e.status)dl+='<dt>Status</dt><dd><span class="stat">'+esc(e.status)+'</span></dd>';
     if(e.resp)dl+='<dt>Responsável</dt><dd>'+esc(e.resp)+'</dd>';
     if(e.obs)dl+='<dt>Observações</dt><dd>'+esc(e.obs)+'</dd>';
-    if(e.anexo){var u=/^https?:\/\//i.test(e.anexo)?e.anexo:"";dl+='<dt>Anexo</dt><dd>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener">Abrir anexo ↗</a>':esc(e.anexo))+'</dd>'}
+    if(e.anexo){dl+='<dt>Anexo</dt><dd>'+String(e.anexo).split(/\s+/).filter(Boolean).map(function(u){return /^https?:\/\//i.test(u)?'<a href="'+esc(u)+'" target="_blank" rel="noopener">Abrir anexo ↗</a>':esc(u)}).join("<br>")+'</dd>'}
     if(dl)h+='<dl class="det">'+dl+'</dl>';
-    c.innerHTML=h;body.appendChild(c)});
+    if(e.editado)h+='<span class="who">Última edição: '+esc(e.editado)+'</span>';
+    c.innerHTML=h;
+    if(canEdit()&&e.id){var act=document.createElement("div");act.className="evact";
+      var b=document.createElement("button");b.type="button";b.className="linkbtn";b.textContent="Editar";b.onclick=function(){openEditor(e,c)};act.appendChild(b);c.appendChild(act)}
+    body.appendChild(c)});
+  if(canEdit()){var add=document.createElement("button");add.type="button";add.className="btn ghost";add.textContent="+ Adicionar data neste dia";add.onclick=function(){openEditor(null,null)};body.appendChild(add)}
 }
-document.getElementById("prev").onclick=function(){if(month===0){if(year>YMIN){year--;month=11;renderLegend()}}else month--;render()};
-document.getElementById("next").onclick=function(){if(month===11){if(year<YMAX){year++;month=0;renderLegend()}}else month++;render()};
-document.getElementById("editlink").href="https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/edit";
-
-// ---- leitura da planilha (Google Sheets, sem login) ----
-var cbn=0;
-function gviz(sheet){return new Promise(function(res,rej){var name="__agv"+(++cbn);var s=document.createElement("script");
-  var t=setTimeout(function(){cleanup();rej(new Error("tempo"))},15000);
-  function cleanup(){clearTimeout(t);try{delete window[name]}catch(e){window[name]=undefined}s.remove()}
-  window[name]=function(r){cleanup();if(r&&r.status!=="error")res(r.table);else rej(new Error("planilha"))};
-  s.onerror=function(){cleanup();rej(new Error("rede"))};
-  s.src="https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/gviz/tq?tqx=responseHandler:"+name+"&headers=1&sheet="+encodeURIComponent(sheet)+"&_="+Date.now();
-  document.head.appendChild(s)})}
-function cell(c){if(!c||c.v==null)return "";if(typeof c.v==="string"){var m=/^Date\((\d+),(\d+),(\d+)/.exec(c.v);if(m)return m[1]+"-"+pad(+m[2]+1)+"-"+pad(+m[3]);return c.v.trim()}
-  if(typeof c.v==="number"&&c.f&&/\d{1,2}\/\d{1,2}\/\d{4}/.test(c.f)){var p=c.f.split("/");return p[2]+"-"+pad(p[1])+"-"+pad(p[0])}
-  return String(c.f!=null?c.f:c.v).trim()}
-function rows(t){return (t.rows||[]).map(function(r){return (r.c||[]).map(cell)})}
+function openEditor(e,card){
+  editing=true;
+  var f=document.createElement("form");f.className="edform";
+  var tagOpts=D.tags.map(function(t){return '<option>'+esc(t.n)+'</option>'}).join("")+'<option value="">Sem tag</option>';
+  var stOpts=STATUS.map(function(s){return '<option>'+s+'</option>'}).join("");
+  f.innerHTML='<label for="e-title">Título</label><input id="e-title" type="text" maxlength="200" required>'+
+    '<div class="two"><div><label for="e-date">Data</label><input id="e-date" type="date" required></div><div><label for="e-end">Até (opcional, campanhas)</label><input id="e-end" type="date"></div></div>'+
+    '<div class="two"><div><label for="e-tag">Tag</label><select id="e-tag">'+tagOpts+'</select></div><div><label for="e-status">Status</label><select id="e-status">'+stOpts+'</select></div></div>'+
+    '<label for="e-resp">Responsável</label><input id="e-resp" type="text" maxlength="80">'+
+    '<label for="e-idea">Pauta / descrição</label><textarea id="e-idea" maxlength="3000"></textarea>'+
+    '<label for="e-obs">Observações / solicitações</label><textarea id="e-obs" maxlength="5000"></textarea>'+
+    '<label for="e-anexo">Anexos (links, um por linha)</label><textarea id="e-anexo" maxlength="2000" style="min-height:44px"></textarea>'+
+    '<div class="fileline"><label for="e-file" style="font-weight:600">Enviar arquivo (até 15 MB):</label><input id="e-file" type="file"></div>'+
+    '<div class="row"><span class="delwrap"></span><span style="display:flex;gap:8px"><button class="btn ghost" type="button" data-c>Cancelar</button><button class="btn" type="submit">Salvar</button></span></div><div class="status"></div>';
+  var v=function(id){return f.querySelector("#"+id)};
+  v("e-title").value=e?e.title:"";v("e-date").value=e?e.date:selected;v("e-end").value=e&&e.end?e.end:"";
+  v("e-tag").value=e?(TAGC[e.tag]?e.tag:""):(D.tags[0]?D.tags[0].n:"");v("e-status").value=e&&STATUS.indexOf(e.status)>=0?e.status:"A fazer";
+  v("e-resp").value=e?e.resp||"":"";v("e-idea").value=e?e.idea||"":"";v("e-obs").value=e?e.obs||"":"";v("e-anexo").value=e?String(e.anexo||"").split(/\s+/).filter(Boolean).join("\n"):"";
+  var st=f.querySelector(".status");
+  f.querySelector("[data-c]").onclick=function(){editing=false;renderSide()};
+  v("e-file").onchange=function(){var file=this.files[0];if(!file)return;
+    if(file.size>15*1024*1024){st.textContent="O arquivo passa de 15 MB. Envie pelo Google Drive e cole o link.";this.value="";return}
+    st.textContent="Enviando "+file.name+"…";var inp=this;
+    var r=new FileReader();r.onload=function(){var b64=String(r.result).split(",")[1];
+      post({action:"upload",fileName:file.name,mime:file.type||"application/octet-stream",base64:b64},true).then(function(res){
+        var cur=v("e-anexo").value.trim();v("e-anexo").value=(cur?cur+"\n":"")+res.url;st.textContent="Arquivo enviado. Clique em Salvar para gravar.";inp.value=""
+      }).catch(function(err){st.textContent=msg(err)})};
+    r.readAsDataURL(file)};
+  if(e){var dw=f.querySelector(".delwrap");var del=function(){dw.innerHTML='<button class="linkbtn" type="button">Excluir data</button>';dw.firstChild.onclick=function(){
+    dw.innerHTML='<span class="confirm">Excluir de vez? <button class="linkbtn" type="button" data-y>Sim</button><button class="linkbtn" type="button" data-n>Não</button></span>';
+    dw.querySelector("[data-n]").onclick=del;
+    dw.querySelector("[data-y]").onclick=function(){st.textContent="Excluindo…";post({action:"delete",id:e.id}).then(function(){editing=false;renderSide()}).catch(function(err){st.textContent=msg(err)})}}};del()}
+  f.onsubmit=function(ev){ev.preventDefault();
+    var item={id:e?e.id:"",title:v("e-title").value.trim(),date:v("e-date").value,end:v("e-end").value,tag:v("e-tag").value,status:v("e-status").value,
+      resp:v("e-resp").value.trim(),idea:v("e-idea").value.trim(),obs:v("e-obs").value.trim(),anexo:v("e-anexo").value.trim().split(/\s+/).filter(Boolean).join(" ")};
+    if(!item.title||!item.date){st.textContent="Preencha o título e a data.";return}
+    if(item.end&&item.end<item.date){st.textContent="A data final precisa ser depois da data inicial.";return}
+    if(item.end===item.date)item.end="";
+    st.textContent="Salvando…";f.querySelector("[type=submit]").disabled=true;
+    post({action:"save",item:item}).then(function(){editing=false;select(item.date)}).catch(function(err){st.textContent=msg(err);f.querySelector("[type=submit]").disabled=false})};
+  if(card)card.replaceWith(f);else{var body=$("sbody");body.insertBefore(f,body.firstChild);var add=body.querySelector(".btn.ghost:last-child");if(add&&add!==f)add.hidden=true}
+  v("e-title").focus();
+}
+function renderTagMgr(){
+  var box=$("tagmgr");box.hidden=!tagMgrOpen||!canEdit();if(box.hidden)return;
+  box.innerHTML='<h3 style="margin:0;font-family:var(--display)">Tags da agenda</h3><p class="empty" style="margin:0">Mude o nome e a cor. As datas com a tag acompanham.</p>';
+  var row=function(t){var r=document.createElement("form");r.className="tm-row";
+    r.innerHTML='<input type="color" aria-label="Cor"><input type="text" maxlength="40" required aria-label="Nome da tag" placeholder="Nome da nova tag"><button class="btn" type="submit">'+(t?"Salvar":"Criar tag")+'</button>'+(t?'<span class="delwrap"><button class="linkbtn" type="button">Excluir</button></span>':'')+'<span class="status"></span>';
+    var ci=r.querySelector("[type=color]"),ni=r.querySelector("[type=text]"),st=r.querySelector(".status");ci.value=t?color(t.n):"#2a7de1";ni.value=t?t.n:"";
+    if(t){var dw=r.querySelector(".delwrap");dw.firstChild.onclick=function(){dw.innerHTML='<span class="confirm">Excluir? <button class="linkbtn" type="button" data-y>Sim</button><button class="linkbtn" type="button" data-n>Não</button></span>';
+      dw.querySelector("[data-n]").onclick=renderTagMgr;dw.querySelector("[data-y]").onclick=function(){st.textContent="Excluindo…";post({action:"tag",old:t.n,name:t.n,remove:true}).catch(function(e){st.textContent=msg(e)})}}}
+    r.onsubmit=function(ev){ev.preventDefault();st.textContent="Salvando…";post({action:"tag",old:t?t.n:"",name:ni.value.trim(),color:ci.value}).catch(function(e){st.textContent=msg(e)})};
+    return r};
+  D.tags.forEach(function(t){box.appendChild(row(t))});box.appendChild(row(null));
+}
+function msg(e){var c=e&&e.message;return c==="codigo"?"Código da equipe incorreto. Toque em Sair e entre de novo.":c==="dados"?"Confira os campos preenchidos.":c==="nao-encontrado"?"Essa data já tinha sido excluída por outra pessoa.":"Não foi possível salvar. Verifique a internet e tente de novo."}
+function post(body,keep){
+  body.pin=auth.pin;body.nome=auth.nome;
+  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)}).then(function(r){return r.json()}).then(function(res){
+    if(!res.ok)throw new Error(res.error||"erro");
+    if(res.data&&!keep){apply(res.data);stamp()}
+    return res})
+}
+function stamp(){$("sync").textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
 function load(manual){
-  var st=document.getElementById("sync");st.textContent=manual?"Atualizando…":"Carregando a planilha…";
-  Promise.all(["Datas","Tags","Temas","Config"].map(gviz)).then(function(r){
-    var datas=rows(r[0]).filter(function(x){return /^\d{4}-\d\d-\d\d$/.test(x[0])&&x[3]}).map(function(x){return {date:x[0],end:/^\d{4}-\d\d-\d\d$/.test(x[1])?x[1]:"",tag:x[2],title:x[3],idea:x[4],status:x[5],resp:x[6],obs:x[7],anexo:x[8]}});
-    var tags=rows(r[1]).filter(function(x){return x[0]}).map(function(x){return {n:x[0],color:/^#[0-9a-f]{6}$/i.test(x[1])?x[1]:"#7f8c8d"}});
-    var temas=rows(r[2]).map(function(x){return x[1]||""});
-    var cfg={};rows(r[3]).forEach(function(x){if(x[0]==="Título")cfg.title=x[1];if(x[0]==="Linha de cima")cfg.eyebrow=x[1];if(x[0]==="Cor principal")cfg.brand=x[1]});
-    apply({datas:datas,tags:tags,temas:temas.length?temas:SNAP.temas,config:cfg});
-    st.textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
-  }).catch(function(){st.textContent="Mostrando a cópia salva. Não foi possível ler a planilha agora.";});
+  if(!API){$("sync").textContent="";return}
+  if(editing&&!manual)return;
+  if(manual)$("sync").textContent="Atualizando…";
+  fetch(API+"?_="+Date.now()).then(function(r){return r.json()}).then(function(res){if(!res.ok)throw new Error();if(editing&&!manual)return;apply(res.data);stamp()})
+    .catch(function(){$("sync").textContent="Sem conexão com a agenda agora. Mostrando a última versão salva."});
 }
-document.getElementById("reload").onclick=function(){load(true)};
-apply(SNAP);select(todayKey>=SNAP.datas[0].date?todayKey:SNAP.datas[0].date);
+// modo edição
+$("editbtn").onclick=function(){
+  if(canEdit()){auth.pin="";store("agv_pin",null);editing=false;tagMgrOpen=false;renderAll();return}
+  var f=$("unlock");f.hidden=!f.hidden;if(!f.hidden){$("u-nome").value=auth.nome;(auth.nome?$("u-pin"):$("u-nome")).focus()}
+};
+$("u-cancel").onclick=function(){$("unlock").hidden=true};
+$("unlock").onsubmit=function(ev){ev.preventDefault();var st=$("u-st");
+  var nome=$("u-nome").value.trim(),pin=$("u-pin").value.toLowerCase().replace(/\s+/g,"");
+  if(!nome||!pin){st.textContent="Preencha nome e código.";return}
+  st.textContent="Conferindo…";
+  fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"check",pin:pin,nome:nome})}).then(function(r){return r.json()}).then(function(res){
+    if(!res.ok){st.textContent=res.error==="codigo"?"Código incorreto.":"Não foi possível conferir agora.";return}
+    auth={nome:nome,pin:pin};store("agv_nome",nome);store("agv_pin",pin);$("unlock").hidden=true;$("u-pin").value="";st.textContent="";renderAll();
+  }).catch(function(){st.textContent="Sem conexão. Tente de novo."})};
+$("reload").onclick=function(){load(true)};
+$("prev").onclick=function(){if(month===0){if(year>YMIN){year--;month=11;renderLegend()}}else month--;render()};
+$("next").onclick=function(){if(month===11){if(year<YMAX){year++;month=0;renderLegend()}}else month++;render()};
+apply(SNAP);select(todayKey);
 load(false);
+setInterval(function(){if(!document.hidden)load(false)},60000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden)load(false)});
 })();
 </script>
 </body>
