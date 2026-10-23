@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Agenda Audiovida Matriz</title>
 <meta name="description" content="Agenda de conteúdo e datas da Audiovida Soluções Auditivas.">
-<meta name="theme-color" content="#1f5c87">
+<meta name="theme-color" content="#2ec4b6">
 <link rel="icon" href="icone.png">
 <link rel="apple-touch-icon" href="icone.png">
 <link rel="manifest" href="manifest.json">
@@ -20,20 +20,29 @@ img{max-width:100%}
 
 /* Layout: régua de meses no topo, grade do mês + agenda ao lado, painel do dia à direita (gaveta no celular). */
 :root{
-  --bg:#f2f6f8; --surface:#ffffff; --surface-2:#e9f0f3; --fg:#17324a; --muted:#5a5e5f; --line:#d6e1e7;
-  --brand:#1f5c87; --brand-ink:#ffffff; --brand-soft:#dce8f1; --teal:#42b5af; --teal-soft:#dcf2f0;
+  --bg:#e9f7f4; --surface:#ffffff; --surface-2:#eef9f7; --fg:#0b2a4a; --muted:#4b6475; --line:#cbe7e2;
+  --brand:#0b2a4a; --brand-ink:#ffffff; --brand-soft:#dbe6f0; --teal:#2ec4b6; --teal-soft:#d3f2ed;
+  --act:#2ec4b6; --act-hover:#26b2a5; --act-ink:#0b2a4a;
+  --mh-bg:linear-gradient(125deg,#3fd0c1 0%,#2ec4b6 45%,#1faa9c 100%); --mh-fg:#0b2a4a; --mh-line:rgba(11,42,74,.22); --mh-stripe:#0b2a4a;
+  --head-bg:#0b2a4a; --head-fg:#ffffff;
   --c-audicao:#0b7a8c; --c-saude:#3f8f5a; --c-comercial:#c0631c; --c-feriado:#7a6a9e; --c-aniver:#c2416b;
   --display:"Exo 2", "Segoe UI", system-ui, sans-serif;
   --body:"Figtree", "Segoe UI", system-ui, sans-serif;
-  --r:10px;
+  --r:12px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0d1820; --surface:#13232f; --surface-2:#1a2f3d; --fg:#e4edf3; --muted:#9db0bc; --line:#26404f;
-  --brand:#7db4dc; --brand-ink:#0b2236; --brand-soft:#1b3449; --teal:#5ccac3; --teal-soft:#16393a;
+  --bg:#06182b; --surface:#0c2339; --surface-2:#11304c; --fg:#e8f6f3; --muted:#9fbac6; --line:#1d405f;
+  --brand:#5fd8cb; --brand-ink:#06213a; --brand-soft:#123a4f; --teal:#2ec4b6; --teal-soft:#0f3a46;
+  --act:#2ec4b6; --act-hover:#3fd0c1; --act-ink:#06213a;
+  --mh-bg:linear-gradient(125deg,#14857b 0%,#0f6f6a 50%,#0b4f5c 100%); --mh-fg:#f0fbf9; --mh-line:rgba(255,255,255,.22); --mh-stripe:#5fd8cb;
+  --head-bg:#0f5f63; --head-fg:#ffffff;
   --c-audicao:#4fc0d1; --c-saude:#6cc58a; --c-comercial:#f09a55; --c-feriado:#ab9bd4; --c-aniver:#ef7fa2; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0d1820; --surface:#13232f; --surface-2:#1a2f3d; --fg:#e4edf3; --muted:#9db0bc; --line:#26404f;
-  --brand:#7db4dc; --brand-ink:#0b2236; --brand-soft:#1b3449; --teal:#5ccac3; --teal-soft:#16393a;
+  --bg:#06182b; --surface:#0c2339; --surface-2:#11304c; --fg:#e8f6f3; --muted:#9fbac6; --line:#1d405f;
+  --brand:#5fd8cb; --brand-ink:#06213a; --brand-soft:#123a4f; --teal:#2ec4b6; --teal-soft:#0f3a46;
+  --act:#2ec4b6; --act-hover:#3fd0c1; --act-ink:#06213a;
+  --mh-bg:linear-gradient(125deg,#14857b 0%,#0f6f6a 50%,#0b4f5c 100%); --mh-fg:#f0fbf9; --mh-line:rgba(255,255,255,.22); --mh-stripe:#5fd8cb;
+  --head-bg:#0f5f63; --head-fg:#ffffff;
   --c-audicao:#4fc0d1; --c-saude:#6cc58a; --c-comercial:#f09a55; --c-feriado:#ab9bd4; --c-aniver:#ef7fa2; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;
@@ -192,6 +201,50 @@ input[type=color]{width:42px;height:38px;padding:2px;border:1px solid var(--line
 .chip-edit{border-style:dashed;color:var(--brand)}
 .fileline{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .stat{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--surface-2)}
+
+/* ===== Tema verde-água + azul-marinho ===== */
+body{background:linear-gradient(180deg,var(--teal-soft) 0,var(--bg) 460px) no-repeat,var(--bg)}
+.masthead{background:var(--mh-bg);border:0;color:var(--mh-fg);box-shadow:0 10px 30px -18px rgba(11,42,74,.55)}
+.masthead::before{background:var(--mh-stripe);height:6px}
+.masthead::after{content:"";position:absolute;right:-60px;bottom:-90px;width:280px;height:280px;border-radius:50%;border:34px solid rgba(255,255,255,.13);pointer-events:none}
+.masthead .brandline{border-left-color:var(--mh-line);position:relative;z-index:1}
+.masthead .eyebrow{color:var(--mh-fg);opacity:.78}
+.masthead h1{color:var(--mh-fg)}
+.masthead h1 .yr{display:inline-block;background:#0b2a4a;color:#5fe0d2;padding:0 12px;border-radius:10px;line-height:1.15}
+.logo-plate{box-shadow:0 4px 14px -6px rgba(11,42,74,.35);position:relative;z-index:1}
+.masthead .tbtn{background:rgba(255,255,255,.9);color:#0b2a4a;border-color:transparent}
+.masthead .tbtn.primary{background:#0b2a4a;color:#ffffff}
+.masthead .tbtn:hover{filter:brightness(1.06)}
+.masthead .syncnote{color:var(--mh-fg);opacity:.85}
+.masthead .edform{background:var(--surface);color:var(--fg)}
+.wave i{background:var(--mh-fg)}
+.btn{background:var(--act);color:var(--act-ink)}
+.btn:hover{background:var(--act-hover)}
+.btn.ghost{background:transparent;color:var(--brand);border:1px solid var(--brand)}
+.months{border-color:var(--line)}
+.months button:hover{background:var(--teal-soft)}
+.months button[aria-current="true"]{background:var(--act);color:var(--act-ink);font-weight:800}
+.months button[aria-current="true"] .n{color:var(--act-ink)}
+.years button[aria-current="true"]{background:var(--brand);color:var(--brand-ink)}
+.chip.all.on{background:var(--brand);color:var(--brand-ink)}
+.panel{border-color:var(--line);box-shadow:0 6px 22px -18px rgba(11,42,74,.45);overflow:hidden}
+.mhead{background:var(--head-bg);border-bottom:0}
+.mhead h2{color:var(--head-fg)}
+.mhead .iconbtn{background:rgba(255,255,255,.12);color:var(--head-fg);border-color:rgba(255,255,255,.28)}
+.mhead .iconbtn:hover{background:var(--act);color:var(--act-ink);border-color:transparent}
+.theme-note{color:var(--fg);background:var(--teal-soft);margin:12px 12px 0;padding:10px 14px;border-radius:10px;border-left:4px solid var(--act)}
+.wd{color:var(--brand)}
+.cell{background:var(--surface-2);border-color:var(--line)}
+.cell.out{border-color:transparent;background:transparent}
+.cell:not(.out):hover{background:var(--teal-soft)}
+.cell.today .d span:first-child{background:var(--act);color:var(--act-ink)}
+.cell.sel{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset}
+.notecount{background:var(--teal-soft);color:var(--brand)}
+.sidehead{background:var(--teal-soft);border-bottom-color:var(--line)}
+.sidehead h3{color:var(--brand)}
+.tagmgr .tm-head h3{color:var(--brand)}
+.agenda li button:hover{background:var(--teal-soft)}
+.chip:hover{border-color:var(--act)}
 </style>
 </head>
 <body>
@@ -271,7 +324,7 @@ function apply(data){
   var c=D.config||{};
   if(c.title)$("hTitle").textContent=c.title;
   if(c.eyebrow)$("hEyebrow").dataset.base=c.eyebrow;
-  if(/^#[0-9a-f]{6}$/i.test(c.brand||"")){document.documentElement.style.setProperty("--brand",c.brand);document.documentElement.style.setProperty("--brand-ink",ink(c.brand))}
+  
   if(only&&!TAGC[only])only=null;
   renderAll();
 }
