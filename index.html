@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Agenda Audiovida Matriz</title>
 <meta name="description" content="Agenda de conteúdo e datas da Audiovida Soluções Auditivas.">
-<meta name="theme-color" content="#1f5c87">
+<meta name="theme-color" content="#30aeb0">
 <link rel="icon" href="icone.png">
 <link rel="apple-touch-icon" href="icone.png">
 <link rel="manifest" href="manifest.json">
@@ -20,8 +20,8 @@ img{max-width:100%}
 
 /* Layout: régua de meses no topo, grade do mês + agenda ao lado, painel do dia à direita (gaveta no celular). */
 :root{
-  --bg:#ffffff; --surface:#ffffff; --surface-2:#e9f0f3; --fg:#17324a; --muted:#5a5e5f; --line:#d6e1e7;
-  --brand:#1f5c87; --brand-ink:#ffffff; --brand-soft:#dce8f1; --teal:#42b5af; --teal-soft:#dcf2f0;
+  --bg:#f2f6f8; --surface:#ffffff; --surface-2:#e9f0f3; --fg:#17324a; --muted:#5a5e5f; --line:#d6e1e7;
+  --brand:#30aeb0; --brand-ink:#ffffff; --brand-soft:#dcf2f0; --teal:#42b5af; --teal-soft:#dcf2f0;
   --c-audicao:#0b7a8c; --c-saude:#3f8f5a; --c-comercial:#c0631c; --c-feriado:#7a6a9e; --c-aniver:#c2416b;
   --display:"Exo 2", "Segoe UI", system-ui, sans-serif;
   --body:"Figtree", "Segoe UI", system-ui, sans-serif;
@@ -185,23 +185,10 @@ input[type=color]{width:42px;height:38px;padding:2px;border:1px solid var(--line
 .fileline{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .stat{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--surface-2)}
 
-/* Fundo branco, cabecalho com linha verde-agua inteira e titulo verde-agua */
-.masthead::before{background:#2ec4b6}
-h1,h1 .yr{color:#22b8aa}
-.months,.years button,.chip,.panel,.masthead{background:#ffffff}
-/* Selecionados em verde-agua */
-.chip.all.on,.cell.today .d span:first-child{background:#2ec4b6!important;color:#0b2a4a!important;border-color:transparent}
-/* Meses e anos: mesma cor do botao Modo edicao, selecionado em branco */
-.months{background:#1f5c87!important;border:0!important;border-radius:14px;padding:6px;gap:6px;box-shadow:0 8px 24px -16px rgba(31,92,135,.7)}
-.months button{color:#ffffff;border-radius:10px;padding:9px 2px;transition:background .15s,color .15s}
-.months button .n{color:rgba(255,255,255,.7)}
-.months button:hover{background:rgba(255,255,255,.12)}
-.months button[aria-current="true"]{background:#ffffff!important;color:#1f5c87!important;box-shadow:0 2px 8px rgba(0,0,0,.12)}
-.months button[aria-current="true"] .n{color:#1f5c87!important;opacity:.75}
-.years{background:#1f5c87;border-radius:999px;padding:4px;gap:4px;box-shadow:0 8px 24px -16px rgba(31,92,135,.7)}
-.years button{background:transparent!important;color:#ffffff;border:0;padding:6px 18px}
-.years button:hover{background:rgba(255,255,255,.12)!important}
-.years button[aria-current="true"]{background:#ffffff!important;color:#1f5c87!important;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+/* Paleta igual ao print: verde-agua #30aeb0, texto marinho, fundo cinza-claro */
+.masthead::before{background:#30aeb0}
+h1,h1 .yr{color:#30aeb0}
+.td-card{border-left-width:5px}
 /* Celular: mes inteiro em grade (1 ao 30/31) */
 @media (max-width:620px){
 .grid{display:grid!important;padding:8px 6px 10px;gap:3px}
@@ -213,10 +200,10 @@ h1,h1 .yr{color:#22b8aa}
 .cell .more{font-size:9px;line-height:1;font-weight:700}
 }
 /* Destaque do dia */
-.today{background:linear-gradient(135deg,#1f5c87 0%,#174a6d 100%);color:#fff;border-radius:16px;padding:20px 22px 18px;box-shadow:0 14px 34px -20px rgba(31,92,135,.9);display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
-.today::before{content:"";position:absolute;inset:0 auto 0 0;width:6px;background:#2ec4b6}
+.today{background:linear-gradient(135deg,#30aeb0 0%,#23959a 100%);color:#fff;border-radius:16px;padding:20px 22px 18px;box-shadow:0 14px 34px -20px rgba(35,149,154,.9);display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
+.today::before{content:none}
 .td-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px}
-.td-k{display:inline-block;background:#2ec4b6;color:#0b2a4a;font:800 12px var(--body);letter-spacing:.12em;text-transform:uppercase;padding:3px 10px;border-radius:999px;margin-bottom:6px}
+.td-k{display:inline-block;background:#ffffff;color:#1d8c8f;font:800 12px var(--body);letter-spacing:.12em;text-transform:uppercase;padding:3px 10px;border-radius:999px;margin-bottom:6px}
 .td-date{font-family:var(--display);font-weight:800;font-size:clamp(24px,3.4vw,34px);line-height:1.1;margin:0;color:#fff}
 .td-n{font-weight:700;font-size:14px;background:rgba(255,255,255,.14);padding:6px 12px;border-radius:999px}
 .td-body{display:flex;flex-direction:column;gap:10px}
@@ -228,11 +215,11 @@ h1,h1 .yr{color:#22b8aa}
 .td-empty{margin:0;font-size:16px;color:rgba(255,255,255,.9)}
 .td-next{align-self:flex-start;border:0;background:rgba(255,255,255,.12);color:#fff;font:500 14px var(--body);padding:8px 14px;border-radius:10px;cursor:pointer;text-align:left}
 .td-next:hover{background:rgba(255,255,255,.2)}
-.td-add{align-self:flex-start;background:#2ec4b6;color:#0b2a4a}
+.td-add{align-self:flex-start;background:#ffffff;color:#1d8c8f}
 .today .edform{color:var(--fg)}
 .evact{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center}
-.actbtn{border:1px solid var(--line);background:#fff;color:#1f5c87;font:700 13px var(--body);padding:6px 12px;border-radius:8px;cursor:pointer}
-.actbtn:hover{border-color:#1f5c87}
+.actbtn{border:1px solid var(--line);background:#fff;color:#1d8c8f;font:700 13px var(--body);padding:6px 12px;border-radius:8px;cursor:pointer}
+.actbtn:hover{border-color:#30aeb0}
 .actbtn.del{color:#b42318;border-color:#f3c7c3}
 .actbtn.del:hover{background:#fef3f2;border-color:#b42318}
 @media (max-width:620px){.today{padding:16px 16px 14px}.td-date{font-size:24px}}
@@ -316,7 +303,7 @@ function apply(data){
   var c=D.config||{};
   if(c.title)$("hTitle").textContent=c.title;
   if(c.eyebrow)$("hEyebrow").dataset.base=c.eyebrow;
-  if(/^#[0-9a-f]{6}$/i.test(c.brand||"")){document.documentElement.style.setProperty("--brand",c.brand);document.documentElement.style.setProperty("--brand-ink",ink(c.brand))}
+  
   if(only&&!TAGC[only])only=null;
   renderAll();
 }
