@@ -309,6 +309,10 @@ var short=function(k){var d=parse(k);return d.getDate()+"/"+MESES[d.getMonth()].
 var isSpan=function(e){return e.end&&e.end>e.date};
 var isWknd=function(d){var w=d.getDay();return w===0||w===6};
 function nextBiz(k){var d=parse(k);while(isWknd(d))d.setDate(d.getDate()+1);return iso(d)}
+// Fim de semana livre para eventos: só é "prazo de trabalho" (pula sáb/dom) quando começa em dia útil e não é data comemorativa
+var FESTA=/anivers|feriad|comemor|confratern|festa|evento|datas comerciais/i;
+function workTask(date,end,tag){return !!(date&&end&&end>date&&!isWknd(parse(date))&&!FESTA.test(tag||""))}
+function perLine(e){return workTask(e.date,e.end,e.tag)?'Prazo: '+short(e.date)+' a '+short(e.end)+' até as '+HORA_FIM+' · '+bizDays(e.date,e.end)+' dias úteis':'Período: '+short(e.date)+' a '+short(e.end)}
 function bizDays(a,b){var d=parse(a),end=parse(b),n=0;while(d<=end&&n<1000){if(!isWknd(d))n++;d.setDate(d.getDate()+1)}return n}
 var HORA_FIM="18h";
 // Histórico de títulos/responsáveis guardado no navegador, com opção de excluir item a item
@@ -338,7 +342,7 @@ function apply(data){
   D=data;TAGC={};D.tags.forEach(function(t){TAGC[t.n]=/^#[0-9a-f]{6}$/i.test(t.color)?t.color:"#7f8c8d"});
   byDate={};var ys=[now.getFullYear()];
   D.datas.forEach(function(e){if(!/^\d{4}-\d\d-\d\d$/.test(e.date||""))return;ys.push(+e.date.slice(0,4));
-    if(isSpan(e)){var d=parse(e.date),end=parse(e.end),n=0;while(d<=end&&n<400){if(!isWknd(d)){var k=iso(d);(byDate[k]=byDate[k]||[]).push(e)}d.setDate(d.getDate()+1);n++}}
+    if(isSpan(e)){var d=parse(e.date),end=parse(e.end),n=0;var wt=workTask(e.date,e.end,e.tag);while(d<=end&&n<400){if(!wt||!isWknd(d)){var k=iso(d);(byDate[k]=byDate[k]||[]).push(e)}d.setDate(d.getDate()+1);n++}}
     else (byDate[e.date]=byDate[e.date]||[]).push(e)});
   Object.keys(byDate).forEach(function(k){byDate[k].sort(function(a,b){return (a.tag==="Aniversários da equipe")-(b.tag==="Aniversários da equipe")||String(a.title).localeCompare(String(b.title))})});
   YMIN=Math.min.apply(null,ys);YMAX=Math.max.apply(null,ys);
@@ -434,7 +438,7 @@ function renderSide(){
   if(!evs.length){var p=document.createElement("p");p.className="empty";p.textContent=canEdit()?"Sem data cadastrada neste dia.":"Sem data cadastrada neste dia. Para incluir, toque em ✎ Modo edição.";body.appendChild(p)}
   evs.forEach(function(e){var c=document.createElement("div");c.className="evcard";c.style.borderColor=color(e.tag);
     var h='<span class="k" style="color:'+color(e.tag)+'">'+esc(e.tag||"Sem tag")+'</span><span class="ti">'+esc(e.title)+'</span>';
-    if(isSpan(e))h+='<span class="per">Prazo: '+short(e.date)+' a '+short(e.end)+' até as '+HORA_FIM+' · '+bizDays(e.date,e.end)+' dias úteis</span>';
+    if(isSpan(e))h+='<span class="per">'+perLine(e)+'</span>';
     if(e.idea)h+='<span class="idea"><b>Pauta:</b> '+esc(e.idea)+'</span>';
     var dl='';
     if(e.status)dl+='<dt>Status</dt><dd><span class="stat">'+esc(e.status)+'</span></dd>';
@@ -467,7 +471,7 @@ function renderToday(force){
   if(!evs.length){var p=document.createElement("p");p.className="td-empty";p.textContent="Não há nenhuma data cadastrada para hoje.";body.appendChild(p)}
   evs.forEach(function(e){var c=document.createElement("div");c.className="td-card";c.style.borderLeftColor=color(e.tag);
     var h='<span class="k" style="color:'+color(e.tag)+'">'+esc(e.tag||"Sem tag")+'</span><span class="ti">'+esc(e.title)+'</span>';
-    if(isSpan(e))h+='<span class="per">Prazo: '+short(e.date)+' a '+short(e.end)+' até as '+HORA_FIM+' · '+bizDays(e.date,e.end)+' dias úteis</span>';
+    if(isSpan(e))h+='<span class="per">'+perLine(e)+'</span>';
     if(e.idea)h+='<span class="idea">'+esc(e.idea)+'</span>';
     var meta=[];if(e.status)meta.push('<span class="stat">'+esc(e.status)+'</span>');if(e.resp)meta.push('Responsável: '+esc(e.resp));
     if(meta.length)h+='<span class="td-meta">'+meta.join(' · ')+'</span>';
@@ -486,7 +490,7 @@ function openEditor(e,card){
   var stOpts=STATUS.map(function(s){return '<option>'+s+'</option>'}).join("");
   f.innerHTML='<label for="e-title">Título</label><input id="e-title" type="text" maxlength="200" required autocomplete="off">'+
     '<div class="two"><div><label for="e-date">Data</label><input id="e-date" type="date" required></div><div><label for="e-end">Prazo / até (opcional)</label><input id="e-end" type="date"></div></div>'+
-    '<span class="hint" id="e-hint">Sábado e domingo são pulados: prazo que cair no fim de semana vai para a segunda. Expediente: 9h às 18h.</span>'+
+    '<span class="hint" id="e-hint">Prazos de trabalho pulam sábado e domingo. Aniversários, confraternizações, feriados e datas comemorativas ficam livres no fim de semana. Expediente: 9h às 18h.</span>'+
     '<div class="two"><div><label for="e-tag">Tag</label><select id="e-tag">'+tagOpts+'</select></div><div><label for="e-status">Status</label><select id="e-status">'+stOpts+'</select></div></div>'+
     '<label for="e-resp">Responsável</label><input id="e-resp" type="text" maxlength="80" autocomplete="off">'+
     '<label for="e-idea">Pauta / descrição</label><textarea id="e-idea" maxlength="3000"></textarea>'+
@@ -501,10 +505,12 @@ function openEditor(e,card){
   var st=f.querySelector(".status");
   f.setAttribute("autocomplete","off");
   attachHist(v("e-title"),"agv_hist_titulo");attachHist(v("e-resp"),"agv_hist_resp");
-  var fixEnd=function(){var en=v("e-end").value,hint=f.querySelector("#e-hint");if(!en)return;
+  var hint0=f.querySelector("#e-hint").textContent;
+  var fixEnd=function(){var en=v("e-end").value,ini=v("e-date").value,hint=f.querySelector("#e-hint");
+    if(!en||!workTask(ini,en,v("e-tag").value)){hint.textContent=ini&&isWknd(parse(ini))?"Data no fim de semana: fica no sábado/domingo normalmente.":hint0;return}
     var nb=nextBiz(en);if(nb!==en){v("e-end").value=nb;hint.textContent="O prazo caía no fim de semana e foi para "+fmtLong(nb)+", até as "+HORA_FIM+"."}
-    var ini=v("e-date").value;if(ini&&v("e-end").value>ini)hint.textContent=(nb!==en?hint.textContent+" ":"")+"Prazo de "+bizDays(ini,v("e-end").value)+" dias úteis (sem sábado e domingo)."};
-  v("e-end").addEventListener("change",fixEnd);v("e-date").addEventListener("change",fixEnd);
+    if(ini&&v("e-end").value>ini)hint.textContent=(nb!==en?hint.textContent+" ":"")+"Prazo de "+bizDays(ini,v("e-end").value)+" dias úteis (sem sábado e domingo)."};
+  v("e-end").addEventListener("change",fixEnd);v("e-date").addEventListener("change",fixEnd);v("e-tag").addEventListener("change",fixEnd);
   f.querySelector("[data-c]").onclick=function(){endEdit();renderSide();renderToday(true)};
   var uploading=null,uploadCount=0;
   var sendFile=function(file){
@@ -538,7 +544,7 @@ function openEditor(e,card){
       uploading.then(function(){f.querySelector("[type=submit]").disabled=false;f.requestSubmit?f.requestSubmit():f.onsubmit(ev)});return}
     var item={id:e?e.id:"",title:v("e-title").value.trim(),date:v("e-date").value,end:v("e-end").value,tag:v("e-tag").value,status:v("e-status").value,
       resp:v("e-resp").value.trim(),idea:v("e-idea").value.trim(),obs:v("e-obs").value.trim(),anexo:v("e-anexo").value.trim().split(/\s+/).filter(Boolean).join(" ")};
-    if(item.end)item.end=nextBiz(item.end);
+    if(item.end&&workTask(item.date,item.end,item.tag))item.end=nextBiz(item.end);
     if(!item.title||!item.date){st.textContent="Preencha o título e a data.";return}
     if(item.end&&item.end<item.date){st.textContent="A data final precisa ser depois da data inicial.";return}
     if(item.end===item.date)item.end="";
