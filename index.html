@@ -236,6 +236,13 @@ h1,h1 .yr{color:#30aeb0}
 .aclist .acdel{flex:none;width:30px;height:30px;border:0;background:none;color:var(--muted);font-size:18px;line-height:1;border-radius:6px;cursor:pointer}
 .aclist .acdel:hover{background:#fef3f2;color:#b42318}
 .hint{font-size:12px;color:var(--muted)}
+/* Texto selecionável/copiável e horários */
+.evcard,.td-card,.evcard *,.td-card *,.theme-note{-webkit-user-select:text;user-select:text}
+.edform input,.edform textarea{-webkit-user-select:text;user-select:text}
+.evcard .idea,.td-card .idea,.det dd{white-space:pre-wrap;word-break:break-word}
+.edform textarea{min-height:110px}
+.edform #e-anexo{min-height:44px}
+.hora{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;color:#1d8c8f;background:#dcf2f0;border-radius:999px;padding:2px 10px;align-self:flex-start}
 </style>
 </head>
 <body>
@@ -311,7 +318,18 @@ var canEdit=function(){return !!(API&&auth.pin)};
 var color=function(t){return TAGC[t]||"#7f8c8d"};
 var short=function(k){var d=parse(k);return d.getDate()+"/"+MESES[d.getMonth()].slice(0,3).toLowerCase()};
 var isSpan=function(e){return e.end&&e.end>e.date};
-var ANO_MIN=2026,ANO_MAX=2040;
+// Horário dos eventos ("14:30" ou "14:30-15:45")
+var hh=function(t){return t?t.replace(":00","h").replace(":","h"):""};
+var horaTxt=function(e){if(!e.hora)return "";var p=String(e.hora).split("-");return p[1]?hh(p[0])+" às "+hh(p[1]):hh(p[0])};
+var horaTag=function(e){return e.hora?'<span class="hora">🕒 '+esc(horaTxt(e))+'</span>':''};
+// Copiar o texto do evento (título, horário, pauta, observações, responsável)
+function copyText(e){var t=[e.title,(horaTxt(e)?"Horário: "+horaTxt(e):""),(e.idea?"Pauta: "+e.idea:""),(e.obs?"Observações: "+e.obs:""),(e.resp?"Responsável: "+e.resp:"")].filter(Boolean).join("\n");
+  if(navigator.clipboard&&window.isSecureContext)return navigator.clipboard.writeText(t);
+  return new Promise(function(ok){var ta=document.createElement("textarea");ta.value=t;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy")}catch(x){}ta.remove();ok()})}
+function copyBtn(e){var b=document.createElement("button");b.type="button";b.className="actbtn";b.textContent="⧉ Copiar texto";
+  b.onclick=function(){copyText(e).then(function(){b.textContent="✓ Copiado";setTimeout(function(){b.textContent="⧉ Copiar texto"},1800)})};return b}
+function actRow(e,c){var ac=canEdit()&&e.id&&live?actions(e,c):(function(){var d=document.createElement("div");d.className="evact";return d})();ac.insertBefore(copyBtn(e),ac.firstChild);return ac}
+var ANO_MIN=2026,ANO_MAX=2028;
 var isWknd=function(d){var w=d.getDay();return w===0||w===6};
 function nextBiz(k){var d=parse(k);while(isWknd(d))d.setDate(d.getDate()+1);return iso(d)}
 // Fim de semana livre para eventos: só é "prazo de trabalho" (pula sáb/dom) quando começa em dia útil e não é data comemorativa
@@ -349,7 +367,7 @@ function apply(data){
   D.datas.forEach(function(e){if(!/^\d{4}-\d\d-\d\d$/.test(e.date||""))return;ys.push(+e.date.slice(0,4));
     if(isSpan(e)){var d=parse(e.date),end=parse(e.end),n=0;var wt=workTask(e.date,e.end,e.tag);while(d<=end&&n<400){if(!wt||!isWknd(d)){var k=iso(d);(byDate[k]=byDate[k]||[]).push(e)}d.setDate(d.getDate()+1);n++}}
     else (byDate[e.date]=byDate[e.date]||[]).push(e)});
-  Object.keys(byDate).forEach(function(k){byDate[k].sort(function(a,b){return (a.tag==="Aniversários da equipe")-(b.tag==="Aniversários da equipe")||String(a.title).localeCompare(String(b.title))})});
+  Object.keys(byDate).forEach(function(k){byDate[k].sort(function(a,b){return (a.hora?0:1)-(b.hora?0:1)||String(a.hora||"").localeCompare(String(b.hora||""))||(a.tag==="Aniversários da equipe")-(b.tag==="Aniversários da equipe")||String(a.title).localeCompare(String(b.title))})});
   ys.push(ANO_MIN,ANO_MAX);YMIN=Math.min.apply(null,ys);YMAX=Math.max.apply(null,ys);
   if(year<YMIN){year=YMIN;month=0}if(year>YMAX){year=YMAX;month=0}
   var c=D.config||{};
@@ -385,7 +403,7 @@ function renderLegend(){
     t.onclick=function(){tagMgrOpen=!tagMgrOpen;renderLegend();renderTagMgr()};el.appendChild(t)}
 }
 function renderYears(){
-  // Filtro de ano em lista suspensa (2026–2040), com a quantidade de datas de cada ano
+  // Filtro de ano em lista suspensa (2026–2028), com a quantidade de datas de cada ano
   var el=$("years"),sel=$("ysel");
   if(!sel){el.innerHTML='<select id="ysel" aria-labelledby="ylabel"></select>';sel=$("ysel");
     sel.onchange=function(){var y=+sel.value;if(y===year)return;year=y;month=(y===now.getFullYear())?now.getMonth():0;renderLegend();render()}}
@@ -415,14 +433,14 @@ function render(){
     var c=document.createElement("button");c.type="button";c.className="cell"+(k===selected?" sel":"")+(k===todayKey?" today":"");
     c.setAttribute("aria-label",d+" de "+MESES[month]+(evs.length?", "+evs.length+" datas":""));
     var h='<div class="d"><span>'+d+'</span></div>';
-    evs.slice(0,2).forEach(function(e){h+='<div class="ev'+(isSpan(e)?' span':'')+'" style="background:'+color(e.tag)+';color:'+ink(color(e.tag))+'">'+esc(String(e.title).replace("Aniversário: ","🎂 "))+'</div>'});
+    evs.slice(0,2).forEach(function(e){h+='<div class="ev'+(isSpan(e)?' span':'')+'" style="background:'+color(e.tag)+';color:'+ink(color(e.tag))+'">'+(e.hora?esc(hh(String(e.hora).split("-")[0]))+' ':'')+esc(String(e.title).replace("Aniversário: ","🎂 "))+'</div>'});
     if(evs.length>2)h+='<div class="more">+'+(evs.length-2)+'</div>';
     c.innerHTML=h;c.onclick=function(){select(k)};g.appendChild(c)})(d);
   var a=$("agenda");a.innerHTML="";var any=false,shown=new Set();
   for(var d2=1;d2<=days;d2++)(function(d){var k=key(month,d),wd=WD[new Date(year,month,d).getDay()];
     visible(k).forEach(function(e){if(shown.has(e))return;shown.add(e);any=true;
       var li=document.createElement("li"),b=document.createElement("button");b.type="button";
-      b.innerHTML='<span class="day">'+pad(d)+'<small>'+wd+'</small></span><span><span class="t">'+esc(e.title)+'</span><br>'+(isSpan(e)?'<span class="range">'+short(e.date)+' a '+short(e.end)+' · </span>':'')+'<span class="cat">'+esc(e.tag||"Sem tag")+(e.status?' · '+esc(e.status):'')+'</span></span><span class="bar" style="background:'+color(e.tag)+'"></span>';
+      b.innerHTML='<span class="day">'+pad(d)+'<small>'+wd+'</small></span><span><span class="t">'+esc(e.title)+'</span><br>'+(isSpan(e)?'<span class="range">'+short(e.date)+' a '+short(e.end)+' · </span>':'')+(e.hora?'<span class="cat">🕒 '+esc(horaTxt(e))+' · </span>':'')+'<span class="cat">'+esc(e.tag||"Sem tag")+(e.status?' · '+esc(e.status):'')+'</span></span><span class="bar" style="background:'+color(e.tag)+'"></span>';
       b.onclick=function(){select(k)};li.appendChild(b);a.appendChild(li)})})(d2);
   if(!any)a.innerHTML='<li class="empty" style="padding:8px">Nenhuma data neste mês com os filtros atuais.</li>';
 }
@@ -431,7 +449,7 @@ function renderTheme(){
   if(!canEdit())return;
   var b=document.createElement("button");b.type="button";b.className="linkbtn";b.textContent="Editar tema do mês";b.style.marginLeft="8px";
   b.onclick=function(){var f=document.createElement("form");f.className="edform";
-    f.innerHTML='<label for="tm-txt">Tema de '+MESES[month]+'</label><textarea id="tm-txt" maxlength="500"></textarea><div class="row"><span class="status"></span><span style="display:flex;gap:8px"><button class="btn ghost" type="button" data-c>Cancelar</button><button class="btn" type="submit">Salvar</button></span></div>';
+    f.innerHTML='<label for="tm-txt">Tema de '+MESES[month]+'</label><textarea id="tm-txt" maxlength="2000"></textarea><div class="row"><span class="status"></span><span style="display:flex;gap:8px"><button class="btn ghost" type="button" data-c>Cancelar</button><button class="btn" type="submit">Salvar</button></span></div>';
     f.querySelector("textarea").value=D.temas[month]||"";f.querySelector("[data-c]").onclick=renderTheme;
     f.onsubmit=function(ev){ev.preventDefault();var st=f.querySelector(".status");st.textContent="Salvando…";
       post({action:"tema",month:month,text:f.querySelector("textarea").value.trim()}).then(function(){}).catch(function(e){st.textContent=msg(e)})};
@@ -448,6 +466,7 @@ function renderSide(){
   if(!evs.length){var p=document.createElement("p");p.className="empty";p.textContent=canEdit()?"Sem data cadastrada neste dia.":"Sem data cadastrada neste dia. Para incluir, toque em ✎ Modo edição.";body.appendChild(p)}
   evs.forEach(function(e){var c=document.createElement("div");c.className="evcard";c.style.borderColor=color(e.tag);
     var h='<span class="k" style="color:'+color(e.tag)+'">'+esc(e.tag||"Sem tag")+'</span><span class="ti">'+esc(e.title)+'</span>';
+    h+=horaTag(e);
     if(isSpan(e))h+='<span class="per">'+perLine(e)+'</span>';
     if(e.idea)h+='<span class="idea"><b>Pauta:</b> '+esc(e.idea)+'</span>';
     var dl='';
@@ -457,7 +476,7 @@ function renderSide(){
     if(e.anexo){dl+='<dt>Anexo</dt><dd>'+String(e.anexo).split(/\s+/).filter(Boolean).map(function(u){return /^https?:\/\//i.test(u)?'<a href="'+esc(u)+'" target="_blank" rel="noopener">Abrir anexo ↗</a>':esc(u)}).join("<br>")+'</dd>'}
     if(dl)h+='<dl class="det">'+dl+'</dl>';
     c.innerHTML=h;
-    if(canEdit()&&e.id&&live)c.appendChild(actions(e,c));
+    c.appendChild(actRow(e,c));
     body.appendChild(c)});
   if(canEdit()&&!live&&evs.length){var w=document.createElement("p");w.className="empty";w.textContent="Carregando a versão mais recente da agenda para liberar a edição…";body.appendChild(w)}
   if(canEdit()){var add=document.createElement("button");add.type="button";add.className="btn ghost";add.textContent="+ Adicionar data neste dia";add.onclick=function(){openEditor(null,null)};body.appendChild(add)}
@@ -481,11 +500,12 @@ function renderToday(force){
   if(!evs.length){var p=document.createElement("p");p.className="td-empty";p.textContent="Não há nenhuma data cadastrada para hoje.";body.appendChild(p)}
   evs.forEach(function(e){var c=document.createElement("div");c.className="td-card";c.style.borderLeftColor=color(e.tag);
     var h='<span class="k" style="color:'+color(e.tag)+'">'+esc(e.tag||"Sem tag")+'</span><span class="ti">'+esc(e.title)+'</span>';
+    h+=horaTag(e);
     if(isSpan(e))h+='<span class="per">'+perLine(e)+'</span>';
     if(e.idea)h+='<span class="idea">'+esc(e.idea)+'</span>';
     var meta=[];if(e.status)meta.push('<span class="stat">'+esc(e.status)+'</span>');if(e.resp)meta.push('Responsável: '+esc(e.resp));
     if(meta.length)h+='<span class="td-meta">'+meta.join(' · ')+'</span>';
-    c.innerHTML=h;if(canEdit()&&e.id&&live)c.appendChild(actions(e,c));body.appendChild(c)});
+    c.innerHTML=h;c.appendChild(actRow(e,c));body.appendChild(c)});
   var nx=null;Object.keys(byDate).sort().some(function(k){if(k>todayKey&&byDate[k].length){nx=k;return true}});
   if(nx){var n=document.createElement("button");n.type="button";n.className="td-next";var e0=byDate[nx][0];
     n.innerHTML='Próxima data: <b>'+short(nx)+' · '+esc(e0.title)+'</b>'+(byDate[nx].length>1?' e mais '+(byDate[nx].length-1):'')+' ›';
@@ -498,20 +518,21 @@ function openEditor(e,card){
   var f=document.createElement("form");f.className="edform";
   var tagOpts=D.tags.map(function(t){return '<option>'+esc(t.n)+'</option>'}).join("")+'<option value="">Sem tag</option>';
   var stOpts=STATUS.map(function(s){return '<option>'+s+'</option>'}).join("");
-  f.innerHTML='<label for="e-title">Título</label><input id="e-title" type="text" maxlength="200" required autocomplete="off">'+
-    '<div class="two"><div><label for="e-date">Data</label><input id="e-date" type="date" required min="2026-01-01" max="2040-12-31"></div><div><label for="e-end">Prazo / até (opcional)</label><input id="e-end" type="date" min="2026-01-01" max="2040-12-31"></div></div>'+
+  f.innerHTML='<label for="e-title">Título</label><input id="e-title" type="text" maxlength="300" required autocomplete="off">'+
+    '<div class="two"><div><label for="e-date">Data</label><input id="e-date" type="date" required min="2026-01-01" max="2028-12-31"></div><div><label for="e-end">Prazo / até (opcional)</label><input id="e-end" type="date" min="2026-01-01" max="2028-12-31"></div></div>'+
     '<span class="hint" id="e-hint">Prazos de trabalho pulam sábado e domingo. Aniversários, confraternizações, feriados e datas comemorativas ficam livres no fim de semana. Expediente: 9h às 18h.</span>'+
+    '<div class="two"><div><label for="e-hora">Horário de início (opcional)</label><input id="e-hora" type="time" step="300"></div><div><label for="e-horafim">Horário de término (opcional)</label><input id="e-horafim" type="time" step="300"></div></div>'+
     '<div class="two"><div><label for="e-tag">Tag</label><select id="e-tag">'+tagOpts+'</select></div><div><label for="e-status">Status</label><select id="e-status">'+stOpts+'</select></div></div>'+
-    '<label for="e-resp">Responsável</label><input id="e-resp" type="text" maxlength="80" autocomplete="off">'+
-    '<label for="e-idea">Pauta / descrição</label><textarea id="e-idea" maxlength="3000"></textarea>'+
-    '<label for="e-obs">Observações / solicitações</label><textarea id="e-obs" maxlength="5000"></textarea>'+
-    '<label for="e-anexo">Anexos (links, um por linha)</label><textarea id="e-anexo" maxlength="2000" style="min-height:44px"></textarea>'+
+    '<label for="e-resp">Responsável</label><input id="e-resp" type="text" maxlength="120" autocomplete="off">'+
+    '<label for="e-idea">Pauta / descrição</label><textarea id="e-idea" maxlength="20000"></textarea>'+
+    '<label for="e-obs">Observações / solicitações</label><textarea id="e-obs" maxlength="20000"></textarea>'+
+    '<label for="e-anexo">Anexos (links, um por linha)</label><textarea id="e-anexo" maxlength="5000" style="min-height:44px"></textarea>'+
     '<div class="fileline"><label for="e-file" style="font-weight:600">Enviar arquivo (até 15 MB):</label><input id="e-file" type="file" multiple></div>'+
     '<div class="row"><span class="delwrap"></span><span style="display:flex;gap:8px"><button class="btn ghost" type="button" data-c>Cancelar</button><button class="btn" type="submit">Salvar</button></span></div><div class="status"></div>';
   var v=function(id){return f.querySelector("#"+id)};
   v("e-title").value=e?e.title:"";v("e-date").value=e?e.date:selected;v("e-end").value=e&&e.end?e.end:"";
   v("e-tag").value=e?(TAGC[e.tag]?e.tag:""):(D.tags[0]?D.tags[0].n:"");v("e-status").value=e&&STATUS.indexOf(e.status)>=0?e.status:"A fazer";
-  v("e-resp").value=e?e.resp||"":"";v("e-idea").value=e?e.idea||"":"";v("e-obs").value=e?e.obs||"":"";v("e-anexo").value=e?String(e.anexo||"").split(/\s+/).filter(Boolean).join("\n"):"";
+  var hp=e&&e.hora?String(e.hora).split("-"):[];v("e-hora").value=hp[0]||"";v("e-horafim").value=hp[1]||"";v("e-resp").value=e?e.resp||"":"";v("e-idea").value=e?e.idea||"":"";v("e-obs").value=e?e.obs||"":"";v("e-anexo").value=e?String(e.anexo||"").split(/\s+/).filter(Boolean).join("\n"):"";
   var st=f.querySelector(".status");
   f.setAttribute("autocomplete","off");
   attachHist(v("e-title"),"agv_hist_titulo");attachHist(v("e-resp"),"agv_hist_resp");
@@ -556,12 +577,14 @@ function openEditor(e,card){
     if(uploadCount){st.textContent="Aguardando o arquivo terminar de enviar…";f.querySelector("[type=submit]").disabled=true;
       uploading.then(function(){f.querySelector("[type=submit]").disabled=false;f.requestSubmit?f.requestSubmit():f.onsubmit(ev)});return}
     var item={id:e?e.id:"",title:v("e-title").value.trim(),date:v("e-date").value,end:v("e-end").value,tag:v("e-tag").value,status:v("e-status").value,
-      resp:v("e-resp").value.trim(),idea:v("e-idea").value.trim(),obs:v("e-obs").value.trim(),anexo:v("e-anexo").value.trim().split(/\s+/).filter(Boolean).join(" ")};
+      resp:v("e-resp").value.trim(),hora:(v("e-hora").value?v("e-hora").value+(v("e-horafim").value?"-"+v("e-horafim").value:""):""),idea:v("e-idea").value.trim(),obs:v("e-obs").value.trim(),anexo:v("e-anexo").value.trim().split(/\s+/).filter(Boolean).join(" ")};
     if(item.end&&workTask(item.date,item.end,item.tag))item.end=nextBiz(item.end);
     if(!item.title||!item.date){st.textContent="Preencha o título e a data.";return}
     if(!okY(item.date)||(item.end&&!okY(item.end))){st.textContent="Use datas entre "+ANO_MIN+" e "+ANO_MAX+".";return}
     if(item.end&&item.end<item.date){st.textContent="A data final precisa ser depois da data inicial.";return}
     if(item.end===item.date)item.end="";
+    if(v("e-horafim").value&&!v("e-hora").value){st.textContent="Preencha o horário de início.";return}
+    if(v("e-horafim").value&&v("e-horafim").value<=v("e-hora").value){st.textContent="O término precisa ser depois do início.";return}
     histAdd("agv_hist_titulo",item.title);histAdd("agv_hist_resp",item.resp);
     st.textContent="Salvando…";f.querySelector("[type=submit]").disabled=true;
     post({action:"save",item:item}).then(function(){endEdit();renderToday(true);select(item.date)}).catch(function(err){st.textContent=msg(err);f.querySelector("[type=submit]").disabled=false})};
