@@ -117,8 +117,10 @@ textarea{width:100%;min-height:84px;resize:vertical;border:1px solid var(--line)
 .years button{border:1px solid var(--line);background:var(--surface);color:var(--fg);font:700 14px var(--display);padding:6px 16px;border-radius:999px;cursor:pointer;font-variant-numeric:tabular-nums}
 .years button[aria-current="true"]{background:var(--brand);color:var(--brand-ink);border-color:transparent}
 .years button:hover{border-color:var(--brand)}
-.years button .yn{margin-left:6px;font:700 11px var(--body);opacity:.7}
-@media (max-width:620px){.yearbar{flex-wrap:nowrap}.years{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px;min-width:0}.years::-webkit-scrollbar{display:none}.years button{flex:none}}
+.years select{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2330aeb0' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 14px center;color:var(--fg);font:700 15px var(--display);padding:8px 40px 8px 16px;border-radius:999px;cursor:pointer;font-variant-numeric:tabular-nums;min-width:170px}
+.years select:hover{border-color:var(--brand)}
+.years select:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
 .cell .ev.span{border-radius:2px;opacity:.92}
 .agenda .range{font-size:12px;color:var(--muted)}
 .evcard .per{font-size:12px;color:var(--muted);font-weight:600}
@@ -259,7 +261,7 @@ h1,h1 .yr{color:#30aeb0}
   <section class="panel tagmgr" id="tagmgr" hidden aria-label="Gerenciar tags"></section>
   <section class="today" id="today" aria-label="Hoje" aria-live="polite"></section>
   <div class="filterbar"><span class="fl-label" id="flabel">Filtrar por tag</span><div class="legend" id="legend" role="group" aria-labelledby="flabel"></div></div>
-  <div class="yearbar"><span class="fl-label" id="ylabel">Ano</span><div class="years" id="years" role="group" aria-labelledby="ylabel"></div></div>
+  <div class="yearbar"><span class="fl-label" id="ylabel">Ano</span><div class="years" id="years"></div></div>
   <nav class="months" id="months" aria-label="Meses"></nav>
   <div class="main">
     <section class="panel" aria-labelledby="mtitle">
@@ -383,11 +385,16 @@ function renderLegend(){
     t.onclick=function(){tagMgrOpen=!tagMgrOpen;renderLegend();renderTagMgr()};el.appendChild(t)}
 }
 function renderYears(){
-  var el=$("years");el.innerHTML="";
-  for(var y=YMIN;y<=YMAX;y++)(function(y){var b=document.createElement("button");b.type="button";var cy=D.datas.filter(function(e){return String(e.date).slice(0,4)==String(y)||(e.end&&e.end.slice(0,4)==String(y))}).length;b.innerHTML=y+(cy?'<span class="yn">'+cy+'</span>':"");b.title=cy?cy+" datas em "+y:"Nenhuma data em "+y;b.setAttribute("aria-current",y===year);
-    b.onclick=function(){if(y===year)return;year=y;month=(y===now.getFullYear())?now.getMonth():0;renderLegend();render()};el.appendChild(b)})(y);
-  document.querySelector(".yearbar").hidden=false;var cur=el.querySelector("[aria-current=true]");if(cur&&el.scrollWidth>el.clientWidth)el.scrollLeft=cur.offsetLeft-el.clientWidth/2+cur.offsetWidth/2;
+  // Filtro de ano em lista suspensa (2026–2040), com a quantidade de datas de cada ano
+  var el=$("years"),sel=$("ysel");
+  if(!sel){el.innerHTML='<select id="ysel" aria-labelledby="ylabel"></select>';sel=$("ysel");
+    sel.onchange=function(){var y=+sel.value;if(y===year)return;year=y;month=(y===now.getFullYear())?now.getMonth():0;renderLegend();render()}}
+  var h="";for(var y=YMIN;y<=YMAX;y++){var cy=D.datas.filter(function(e){return String(e.date).slice(0,4)==String(y)||(e.end&&e.end.slice(0,4)==String(y))}).length;
+    h+='<option value="'+y+'"'+(y===year?' selected':'')+'>'+y+(cy?' · '+cy+(cy>1?' datas':' data'):'')+'</option>'}
+  sel.innerHTML=h;sel.value=String(year);
+  document.querySelector(".yearbar").hidden=false;
 }
+
 function key(m,d){return year+"-"+pad(m+1)+"-"+pad(d)}
 function render(){
   renderYears();
