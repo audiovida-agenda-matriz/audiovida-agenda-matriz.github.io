@@ -294,7 +294,15 @@ var D={datas:[],tags:[],temas:[],config:{}},byDate={},TAGC={};
 var now=new Date(),todayKey=iso(now);
 var year=now.getFullYear(),month=now.getMonth(),selected=todayKey,only=null,YMIN=year,YMAX=year;
 var auth={nome:store("agv_nome")||"",pin:store("agv_pin")||""};
-var editing=false,tagMgrOpen=false;
+var editing=false,tagMgrOpen=false,live=false,pending=null;
+// Encerra a edição e aplica dados novos que chegaram enquanto a pessoa editava
+function endEdit(){editing=false;if(pending){var p=pending;pending=null;apply(p)}}
+// Algum formulário aberto? (data, tema do mês ou tags) -> não redesenhar por baixo da pessoa
+function busy(){return editing||!!document.querySelector("#theme form")||(tagMgrOpen&&$("tagmgr").contains(document.activeElement))}
+// fetch com limite de tempo, para nunca ficar preso em "Salvando…"
+function fx(url,opt,ms){opt=opt||{};var c=window.AbortController?new AbortController():null,t;if(c)opt.signal=c.signal;
+  return Promise.race([fetch(url,opt),new Promise(function(_,no){t=setTimeout(function(){if(c)c.abort();no(new Error("tempo"))},ms||45000)})]).then(function(r){clearTimeout(t);return r},function(e){clearTimeout(t);throw (e&&e.message==="tempo")?e:new Error("rede")})}
+function readJSON(r){return r.text().then(function(t){try{return JSON.parse(t)}catch(e){throw new Error("resposta")}})}
 var canEdit=function(){return !!(API&&auth.pin)};
 var color=function(t){return TAGC[t]||"#7f8c8d"};
 var short=function(k){var d=parse(k);return d.getDate()+"/"+MESES[d.getMonth()].slice(0,3).toLowerCase()};
@@ -416,7 +424,7 @@ function renderTheme(){
     el.innerHTML="";el.appendChild(f);f.querySelector("textarea").focus()};
   el.appendChild(b);
 }
-function select(k){editing=false;selected=k;var y=+k.slice(0,4);if(y!==year){year=y;renderLegend()}month=+k.slice(5,7)-1;render();renderSide();
+function select(k){endEdit();selected=k;var y=+k.slice(0,4);if(y!==year){year=y;renderLegend()}month=+k.slice(5,7)-1;render();renderSide();
   if(window.innerWidth<=900)$("side").scrollIntoView({behavior:"smooth",block:"start"})}
 function fmtLong(k){var a=k.split("-").map(Number);return WD[new Date(a[0],a[1]-1,a[2]).getDay()]+", "+a[2]+" de "+MESES[a[1]-1].toLowerCase()+" de "+a[0]}
 function renderSide(){
@@ -435,8 +443,9 @@ function renderSide(){
     if(e.anexo){dl+='<dt>Anexo</dt><dd>'+String(e.anexo).split(/\s+/).filter(Boolean).map(function(u){return /^https?:\/\//i.test(u)?'<a href="'+esc(u)+'" target="_blank" rel="noopener">Abrir anexo ↗</a>':esc(u)}).join("<br>")+'</dd>'}
     if(dl)h+='<dl class="det">'+dl+'</dl>';
     c.innerHTML=h;
-    if(canEdit()&&e.id)c.appendChild(actions(e,c));
+    if(canEdit()&&e.id&&live)c.appendChild(actions(e,c));
     body.appendChild(c)});
+  if(canEdit()&&!live&&evs.length){var w=document.createElement("p");w.className="empty";w.textContent="Carregando a versão mais recente da agenda para liberar a edição…";body.appendChild(w)}
   if(canEdit()){var add=document.createElement("button");add.type="button";add.className="btn ghost";add.textContent="+ Adicionar data neste dia";add.onclick=function(){openEditor(null,null)};body.appendChild(add)}
 }
 function actions(e,c){var act=document.createElement("div");act.className="evact";
@@ -445,7 +454,7 @@ function actions(e,c){var act=document.createElement("div");act.className="evact
   var del=function(){dw.innerHTML='<button class="actbtn del" type="button">🗑 Excluir</button>';dw.firstChild.onclick=function(){
     dw.innerHTML='<span class="confirm">Excluir de vez? <button class="actbtn del" type="button" data-y>Sim, excluir</button><button class="actbtn" type="button" data-n>Não</button></span>';
     dw.querySelector("[data-n]").onclick=del;
-    dw.querySelector("[data-y]").onclick=function(){dw.innerHTML='<span class="status">Excluindo…</span>';post({action:"delete",id:e.id}).then(function(){editing=false;renderSide();renderToday(true)}).catch(function(err){dw.innerHTML='<span class="status">'+esc(msg(err))+'</span>'})}}};
+    dw.querySelector("[data-y]").onclick=function(){dw.innerHTML='<span class="status">Excluindo…</span>';post({action:"delete",id:e.id}).then(function(){endEdit();renderSide();renderToday(true)}).catch(function(err){dw.innerHTML='<span class="status">'+esc(msg(err))+'</span>'})}}};
   del();return act}
 function renderToday(force){
   var box=$("today");if(!box)return;
@@ -462,7 +471,7 @@ function renderToday(force){
     if(e.idea)h+='<span class="idea">'+esc(e.idea)+'</span>';
     var meta=[];if(e.status)meta.push('<span class="stat">'+esc(e.status)+'</span>');if(e.resp)meta.push('Responsável: '+esc(e.resp));
     if(meta.length)h+='<span class="td-meta">'+meta.join(' · ')+'</span>';
-    c.innerHTML=h;if(canEdit()&&e.id)c.appendChild(actions(e,c));body.appendChild(c)});
+    c.innerHTML=h;if(canEdit()&&e.id&&live)c.appendChild(actions(e,c));body.appendChild(c)});
   var nx=null;Object.keys(byDate).sort().some(function(k){if(k>todayKey&&byDate[k].length){nx=k;return true}});
   if(nx){var n=document.createElement("button");n.type="button";n.className="td-next";var e0=byDate[nx][0];
     n.innerHTML='Próxima data: <b>'+short(nx)+' · '+esc(e0.title)+'</b>'+(byDate[nx].length>1?' e mais '+(byDate[nx].length-1):'')+' ›';
@@ -496,7 +505,7 @@ function openEditor(e,card){
     var nb=nextBiz(en);if(nb!==en){v("e-end").value=nb;hint.textContent="O prazo caía no fim de semana e foi para "+fmtLong(nb)+", até as "+HORA_FIM+"."}
     var ini=v("e-date").value;if(ini&&v("e-end").value>ini)hint.textContent=(nb!==en?hint.textContent+" ":"")+"Prazo de "+bizDays(ini,v("e-end").value)+" dias úteis (sem sábado e domingo)."};
   v("e-end").addEventListener("change",fixEnd);v("e-date").addEventListener("change",fixEnd);
-  f.querySelector("[data-c]").onclick=function(){editing=false;renderSide();renderToday(true)};
+  f.querySelector("[data-c]").onclick=function(){endEdit();renderSide();renderToday(true)};
   var uploading=null,uploadCount=0;
   var sendFile=function(file){
     uploadCount++;var sb=f.querySelector("[type=submit]");sb.textContent="Enviando arquivo…";
@@ -523,7 +532,7 @@ function openEditor(e,card){
   if(e){var dw=f.querySelector(".delwrap");var del=function(){dw.innerHTML='<button class="linkbtn" type="button">Excluir data</button>';dw.firstChild.onclick=function(){
     dw.innerHTML='<span class="confirm">Excluir de vez? <button class="linkbtn" type="button" data-y>Sim</button><button class="linkbtn" type="button" data-n>Não</button></span>';
     dw.querySelector("[data-n]").onclick=del;
-    dw.querySelector("[data-y]").onclick=function(){st.textContent="Excluindo…";post({action:"delete",id:e.id}).then(function(){editing=false;renderSide();renderToday(true)}).catch(function(err){st.textContent=msg(err)})}}};del()}
+    dw.querySelector("[data-y]").onclick=function(){st.textContent="Excluindo…";post({action:"delete",id:e.id}).then(function(){endEdit();renderSide();renderToday(true)}).catch(function(err){st.textContent=msg(err)})}}};del()}
   f.onsubmit=function(ev){ev.preventDefault();
     if(uploadCount){st.textContent="Aguardando o arquivo terminar de enviar…";f.querySelector("[type=submit]").disabled=true;
       uploading.then(function(){f.querySelector("[type=submit]").disabled=false;f.requestSubmit?f.requestSubmit():f.onsubmit(ev)});return}
@@ -535,7 +544,7 @@ function openEditor(e,card){
     if(item.end===item.date)item.end="";
     histAdd("agv_hist_titulo",item.title);histAdd("agv_hist_resp",item.resp);
     st.textContent="Salvando…";f.querySelector("[type=submit]").disabled=true;
-    post({action:"save",item:item}).then(function(){editing=false;renderToday(true);select(item.date)}).catch(function(err){st.textContent=msg(err);f.querySelector("[type=submit]").disabled=false})};
+    post({action:"save",item:item}).then(function(){endEdit();renderToday(true);select(item.date)}).catch(function(err){st.textContent=msg(err);f.querySelector("[type=submit]").disabled=false})};
   if(card)card.replaceWith(f);else{var body=$("sbody");body.insertBefore(f,body.firstChild);var add=body.querySelector(".btn.ghost:last-child");if(add&&add!==f)add.hidden=true}
   v("e-title").focus();
 }
@@ -551,25 +560,33 @@ function renderTagMgr(){
     return r};
   D.tags.forEach(function(t){box.appendChild(row(t))});box.appendChild(row(null));
 }
-function msg(e){var c=e&&e.message;return c==="codigo"?"Código da equipe incorreto. Toque em Sair e entre de novo.":c==="dados"?"Confira os campos preenchidos.":c==="nao-encontrado"?"Essa data já tinha sido excluída por outra pessoa.":"Não foi possível salvar. Verifique a internet e tente de novo."}
+function msg(e){var c=e&&e.message;return c==="codigo"?"Código da equipe incorreto. Toque em Sair e entre de novo.":c==="dados"?"Confira os campos preenchidos.":c==="nao-encontrado"?"Essa data já tinha sido excluída por outra pessoa.":c==="tempo"?"O servidor da agenda demorou para responder. Tente salvar de novo.":c==="rede"?"Sem conexão com o servidor da agenda. Verifique a internet (redes de empresa às vezes bloqueiam o Google Apps Script).":c==="resposta"?"O servidor da agenda respondeu com erro. Tente de novo em instantes.":"Não foi possível salvar ("+String(c||"erro")+"). Tente de novo."}
 function post(body,keep){
   body.pin=auth.pin;body.nome=auth.nome;
-  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)}).then(function(r){return r.text()}).then(function(t){try{return JSON.parse(t)}catch(e){throw new Error("resposta")}}).then(function(res){
+  return fx(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)},body.action==="upload"?120000:45000).then(readJSON).then(function(res){
     if(!res.ok)throw new Error(res.error||"erro");
-    if(res.data&&!keep){apply(res.data);stamp()}
+    if(res.data&&!keep){live=true;pending=null;apply(res.data);stamp()}
     return res})
 }
 function stamp(){$("sync").textContent=""}
-function load(manual){
+var loading=false;
+function load(manual,tries){
   if(!API){$("sync").textContent="";return}
-  if(editing&&!manual)return;
-  if(manual)$("sync").textContent="Atualizando…";
-  fetch(API+"?_="+Date.now()).then(function(r){return r.json()}).then(function(res){if(!res.ok)throw new Error();if(editing&&!manual)return;apply(res.data);stamp()})
-    .catch(function(){$("sync").textContent="Sem conexão com a agenda agora. Mostrando a última versão salva."});
+  if(loading&&!manual)return;
+  tries=tries||0;loading=true;
+  if(manual)$("sync").textContent="Atualizando…";else if(!live)$("sync").textContent="Carregando agenda…";
+  fx(API+"?_="+Date.now(),{},30000).then(readJSON).then(function(res){loading=false;
+    if(!res.ok||!res.data||!Array.isArray(res.data.datas))throw new Error("resposta");
+    var first=!live;live=true;
+    if(busy()&&!manual){pending=res.data;if(first&&!editing)renderAll();stamp();return}
+    pending=null;apply(res.data);stamp()})
+    .catch(function(){loading=false;
+      if(tries<2){setTimeout(function(){load(manual,tries+1)},tries?6000:2000);return}
+      $("sync").textContent=live?"Sem conexão agora. Tentando de novo em 1 minuto.":"Sem conexão com a agenda. A edição fica liberada quando a conexão voltar. Toque em ↻ Atualizar."});
 }
 // modo edição
 $("editbtn").onclick=function(){
-  if(canEdit()){auth.pin="";store("agv_pin",null);editing=false;tagMgrOpen=false;renderAll();return}
+  if(canEdit()){auth.pin="";store("agv_pin",null);endEdit();tagMgrOpen=false;renderAll();return}
   var f=$("unlock");f.hidden=!f.hidden;if(!f.hidden){$("u-nome").value=auth.nome;(auth.nome?$("u-pin"):$("u-nome")).focus()}
 };
 $("u-cancel").onclick=function(){$("unlock").hidden=true};
@@ -577,10 +594,10 @@ $("unlock").onsubmit=function(ev){ev.preventDefault();var st=$("u-st");
   var nome=$("u-nome").value.trim(),pin=$("u-pin").value.toLowerCase().replace(/\s+/g,"");
   if(!nome||!pin){st.textContent="Preencha nome e código.";return}
   st.textContent="Conferindo…";
-  fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"check",pin:pin,nome:nome})}).then(function(r){return r.json()}).then(function(res){
+  fx(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"check",pin:pin,nome:nome})},30000).then(readJSON).then(function(res){
     if(!res.ok){st.textContent=res.error==="codigo"?"Código incorreto.":"Não foi possível conferir agora.";return}
-    auth={nome:nome,pin:pin};store("agv_nome",nome);store("agv_pin",pin);$("unlock").hidden=true;$("u-pin").value="";st.textContent="";renderAll();
-  }).catch(function(){st.textContent="Sem conexão. Tente de novo."})};
+    auth={nome:nome,pin:pin};store("agv_nome",nome);store("agv_pin",pin);$("unlock").hidden=true;$("u-pin").value="";st.textContent="";renderAll();if(!live)load(true);
+  }).catch(function(e){st.textContent=e&&e.message==="tempo"?"O servidor demorou para responder. Tente de novo.":"Sem conexão com o servidor da agenda. Tente de novo."})};
 $("reload").onclick=function(){load(true)};
 $("prev").onclick=function(){if(month===0){if(year>YMIN){year--;month=11;renderLegend()}}else month--;render()};
 $("next").onclick=function(){if(month===11){if(year<YMAX){year++;month=0;renderLegend()}}else month++;render()};
