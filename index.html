@@ -483,7 +483,7 @@ function openEditor(e,card){
     '<label for="e-idea">Pauta / descrição</label><textarea id="e-idea" maxlength="3000"></textarea>'+
     '<label for="e-obs">Observações / solicitações</label><textarea id="e-obs" maxlength="5000"></textarea>'+
     '<label for="e-anexo">Anexos (links, um por linha)</label><textarea id="e-anexo" maxlength="2000" style="min-height:44px"></textarea>'+
-    '<div class="fileline"><label for="e-file" style="font-weight:600">Enviar arquivo (até 15 MB):</label><input id="e-file" type="file"></div>'+
+    '<div class="fileline"><label for="e-file" style="font-weight:600">Enviar arquivo (até 15 MB):</label><input id="e-file" type="file" multiple></div>'+
     '<div class="row"><span class="delwrap"></span><span style="display:flex;gap:8px"><button class="btn ghost" type="button" data-c>Cancelar</button><button class="btn" type="submit">Salvar</button></span></div><div class="status"></div>';
   var v=function(id){return f.querySelector("#"+id)};
   v("e-title").value=e?e.title:"";v("e-date").value=e?e.date:selected;v("e-end").value=e&&e.end?e.end:"";
@@ -497,19 +497,36 @@ function openEditor(e,card){
     var ini=v("e-date").value;if(ini&&v("e-end").value>ini)hint.textContent=(nb!==en?hint.textContent+" ":"")+"Prazo de "+bizDays(ini,v("e-end").value)+" dias úteis (sem sábado e domingo)."};
   v("e-end").addEventListener("change",fixEnd);v("e-date").addEventListener("change",fixEnd);
   f.querySelector("[data-c]").onclick=function(){editing=false;renderSide();renderToday(true)};
-  v("e-file").onchange=function(){var file=this.files[0];if(!file)return;
-    if(file.size>15*1024*1024){st.textContent="O arquivo passa de 15 MB. Envie pelo Google Drive e cole o link.";this.value="";return}
-    st.textContent="Enviando "+file.name+"…";var inp=this;
-    var r=new FileReader();r.onload=function(){var b64=String(r.result).split(",")[1];
-      post({action:"upload",fileName:file.name,mime:file.type||"application/octet-stream",base64:b64},true).then(function(res){
-        var cur=v("e-anexo").value.trim();v("e-anexo").value=(cur?cur+"\n":"")+res.url;st.textContent="Arquivo enviado. Clique em Salvar para gravar.";inp.value=""
-      }).catch(function(err){st.textContent=msg(err)})};
-    r.readAsDataURL(file)};
+  var uploading=null,uploadCount=0;
+  var sendFile=function(file){
+    uploadCount++;var sb=f.querySelector("[type=submit]");sb.textContent="Enviando arquivo…";
+    var job=new Promise(function(ok,fail){var r=new FileReader();
+      r.onerror=function(){fail(new Error("leitura"))};
+      r.onload=function(){var b64=String(r.result).split(",")[1];
+        var body={action:"upload",fileName:file.name,mime:file.type||"application/octet-stream",base64:b64};
+        var tries=0,go=function(){tries++;post(Object.assign({},body),true).then(ok).catch(function(err){
+          if(tries<2&&(!err||(err.message!=="codigo"&&err.message!=="dados"))){st.textContent="Tentando enviar "+file.name+" de novo…";setTimeout(go,1500)}else fail(err)})};
+        go()};
+      r.readAsDataURL(file)});
+    job=job.then(function(res){
+      if(!res||!res.url)throw new Error("upload");
+      var cur=v("e-anexo").value.trim();v("e-anexo").value=(cur?cur+"\n":"")+res.url;
+      st.textContent=file.name+" anexado. Clique em Salvar para gravar."}).catch(function(err){
+      st.textContent=err&&err.message==="codigo"?msg(err):"Não foi possível enviar "+file.name+". Escolha o arquivo de novo ou envie pelo Google Drive e cole o link.";throw err})
+      .finally(function(){uploadCount--;if(!uploadCount)sb.textContent="Salvar"});
+    uploading=Promise.all([uploading,job.catch(function(){})]);
+    return job};
+  v("e-file").onchange=function(){var inp=this,files=[].slice.call(inp.files||[]);inp.value="";if(!files.length)return;
+    files.forEach(function(file){
+      if(file.size>15*1024*1024){st.textContent=file.name+" passa de 15 MB. Envie pelo Google Drive e cole o link.";return}
+      st.textContent="Enviando "+file.name+"…";sendFile(file).catch(function(){})})};
   if(e){var dw=f.querySelector(".delwrap");var del=function(){dw.innerHTML='<button class="linkbtn" type="button">Excluir data</button>';dw.firstChild.onclick=function(){
     dw.innerHTML='<span class="confirm">Excluir de vez? <button class="linkbtn" type="button" data-y>Sim</button><button class="linkbtn" type="button" data-n>Não</button></span>';
     dw.querySelector("[data-n]").onclick=del;
     dw.querySelector("[data-y]").onclick=function(){st.textContent="Excluindo…";post({action:"delete",id:e.id}).then(function(){editing=false;renderSide();renderToday(true)}).catch(function(err){st.textContent=msg(err)})}}};del()}
   f.onsubmit=function(ev){ev.preventDefault();
+    if(uploadCount){st.textContent="Aguardando o arquivo terminar de enviar…";f.querySelector("[type=submit]").disabled=true;
+      uploading.then(function(){f.querySelector("[type=submit]").disabled=false;f.requestSubmit?f.requestSubmit():f.onsubmit(ev)});return}
     var item={id:e?e.id:"",title:v("e-title").value.trim(),date:v("e-date").value,end:v("e-end").value,tag:v("e-tag").value,status:v("e-status").value,
       resp:v("e-resp").value.trim(),idea:v("e-idea").value.trim(),obs:v("e-obs").value.trim(),anexo:v("e-anexo").value.trim().split(/\s+/).filter(Boolean).join(" ")};
     if(item.end)item.end=nextBiz(item.end);
@@ -537,7 +554,7 @@ function renderTagMgr(){
 function msg(e){var c=e&&e.message;return c==="codigo"?"Código da equipe incorreto. Toque em Sair e entre de novo.":c==="dados"?"Confira os campos preenchidos.":c==="nao-encontrado"?"Essa data já tinha sido excluída por outra pessoa.":"Não foi possível salvar. Verifique a internet e tente de novo."}
 function post(body,keep){
   body.pin=auth.pin;body.nome=auth.nome;
-  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)}).then(function(r){return r.json()}).then(function(res){
+  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)}).then(function(r){return r.text()}).then(function(t){try{return JSON.parse(t)}catch(e){throw new Error("resposta")}}).then(function(res){
     if(!res.ok)throw new Error(res.error||"erro");
     if(res.data&&!keep){apply(res.data);stamp()}
     return res})
