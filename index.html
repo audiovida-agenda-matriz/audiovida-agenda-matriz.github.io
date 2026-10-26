@@ -117,6 +117,8 @@ textarea{width:100%;min-height:84px;resize:vertical;border:1px solid var(--line)
 .years button{border:1px solid var(--line);background:var(--surface);color:var(--fg);font:700 14px var(--display);padding:6px 16px;border-radius:999px;cursor:pointer;font-variant-numeric:tabular-nums}
 .years button[aria-current="true"]{background:var(--brand);color:var(--brand-ink);border-color:transparent}
 .years button:hover{border-color:var(--brand)}
+.years button .yn{margin-left:6px;font:700 11px var(--body);opacity:.7}
+@media (max-width:620px){.yearbar{flex-wrap:nowrap}.years{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px;min-width:0}.years::-webkit-scrollbar{display:none}.years button{flex:none}}
 .cell .ev.span{border-radius:2px;opacity:.92}
 .agenda .range{font-size:12px;color:var(--muted)}
 .evcard .per{font-size:12px;color:var(--muted);font-weight:600}
@@ -307,6 +309,7 @@ var canEdit=function(){return !!(API&&auth.pin)};
 var color=function(t){return TAGC[t]||"#7f8c8d"};
 var short=function(k){var d=parse(k);return d.getDate()+"/"+MESES[d.getMonth()].slice(0,3).toLowerCase()};
 var isSpan=function(e){return e.end&&e.end>e.date};
+var ANO_MIN=2026,ANO_MAX=2040;
 var isWknd=function(d){var w=d.getDay();return w===0||w===6};
 function nextBiz(k){var d=parse(k);while(isWknd(d))d.setDate(d.getDate()+1);return iso(d)}
 // Fim de semana livre para eventos: só é "prazo de trabalho" (pula sáb/dom) quando começa em dia útil e não é data comemorativa
@@ -345,7 +348,7 @@ function apply(data){
     if(isSpan(e)){var d=parse(e.date),end=parse(e.end),n=0;var wt=workTask(e.date,e.end,e.tag);while(d<=end&&n<400){if(!wt||!isWknd(d)){var k=iso(d);(byDate[k]=byDate[k]||[]).push(e)}d.setDate(d.getDate()+1);n++}}
     else (byDate[e.date]=byDate[e.date]||[]).push(e)});
   Object.keys(byDate).forEach(function(k){byDate[k].sort(function(a,b){return (a.tag==="Aniversários da equipe")-(b.tag==="Aniversários da equipe")||String(a.title).localeCompare(String(b.title))})});
-  YMIN=Math.min.apply(null,ys);YMAX=Math.max.apply(null,ys);
+  ys.push(ANO_MIN,ANO_MAX);YMIN=Math.min.apply(null,ys);YMAX=Math.max.apply(null,ys);
   if(year<YMIN){year=YMIN;month=0}if(year>YMAX){year=YMAX;month=0}
   var c=D.config||{};
   if(c.title)$("hTitle").textContent=c.title;
@@ -381,9 +384,9 @@ function renderLegend(){
 }
 function renderYears(){
   var el=$("years");el.innerHTML="";
-  for(var y=YMIN;y<=YMAX;y++)(function(y){var b=document.createElement("button");b.type="button";b.textContent=y;b.setAttribute("aria-current",y===year);
+  for(var y=YMIN;y<=YMAX;y++)(function(y){var b=document.createElement("button");b.type="button";var cy=D.datas.filter(function(e){return String(e.date).slice(0,4)==String(y)||(e.end&&e.end.slice(0,4)==String(y))}).length;b.innerHTML=y+(cy?'<span class="yn">'+cy+'</span>':"");b.title=cy?cy+" datas em "+y:"Nenhuma data em "+y;b.setAttribute("aria-current",y===year);
     b.onclick=function(){if(y===year)return;year=y;month=(y===now.getFullYear())?now.getMonth():0;renderLegend();render()};el.appendChild(b)})(y);
-  document.querySelector(".yearbar").hidden=YMIN===YMAX;
+  document.querySelector(".yearbar").hidden=false;var cur=el.querySelector("[aria-current=true]");if(cur&&el.scrollWidth>el.clientWidth)el.scrollLeft=cur.offsetLeft-el.clientWidth/2+cur.offsetWidth/2;
 }
 function key(m,d){return year+"-"+pad(m+1)+"-"+pad(d)}
 function render(){
@@ -489,7 +492,7 @@ function openEditor(e,card){
   var tagOpts=D.tags.map(function(t){return '<option>'+esc(t.n)+'</option>'}).join("")+'<option value="">Sem tag</option>';
   var stOpts=STATUS.map(function(s){return '<option>'+s+'</option>'}).join("");
   f.innerHTML='<label for="e-title">Título</label><input id="e-title" type="text" maxlength="200" required autocomplete="off">'+
-    '<div class="two"><div><label for="e-date">Data</label><input id="e-date" type="date" required></div><div><label for="e-end">Prazo / até (opcional)</label><input id="e-end" type="date"></div></div>'+
+    '<div class="two"><div><label for="e-date">Data</label><input id="e-date" type="date" required min="2026-01-01" max="2040-12-31"></div><div><label for="e-end">Prazo / até (opcional)</label><input id="e-end" type="date" min="2026-01-01" max="2040-12-31"></div></div>'+
     '<span class="hint" id="e-hint">Prazos de trabalho pulam sábado e domingo. Aniversários, confraternizações, feriados e datas comemorativas ficam livres no fim de semana. Expediente: 9h às 18h.</span>'+
     '<div class="two"><div><label for="e-tag">Tag</label><select id="e-tag">'+tagOpts+'</select></div><div><label for="e-status">Status</label><select id="e-status">'+stOpts+'</select></div></div>'+
     '<label for="e-resp">Responsável</label><input id="e-resp" type="text" maxlength="80" autocomplete="off">'+
@@ -506,11 +509,14 @@ function openEditor(e,card){
   f.setAttribute("autocomplete","off");
   attachHist(v("e-title"),"agv_hist_titulo");attachHist(v("e-resp"),"agv_hist_resp");
   var hint0=f.querySelector("#e-hint").textContent;
+  // Só mostra o aviso; nunca reescreve o campo enquanto a pessoa digita (o ajuste para segunda acontece ao salvar)
+  var okY=function(k){return /^\d{4}-\d\d-\d\d$/.test(k||"")&&+k.slice(0,4)>=ANO_MIN&&+k.slice(0,4)<=ANO_MAX};
   var fixEnd=function(){var en=v("e-end").value,ini=v("e-date").value,hint=f.querySelector("#e-hint");
+    if((ini&&!okY(ini))||(en&&!okY(en))){hint.textContent="Use um ano entre "+ANO_MIN+" e "+ANO_MAX+".";return}
     if(!en||!workTask(ini,en,v("e-tag").value)){hint.textContent=ini&&isWknd(parse(ini))?"Data no fim de semana: fica no sábado/domingo normalmente.":hint0;return}
-    var nb=nextBiz(en);if(nb!==en){v("e-end").value=nb;hint.textContent="O prazo caía no fim de semana e foi para "+fmtLong(nb)+", até as "+HORA_FIM+"."}
-    if(ini&&v("e-end").value>ini)hint.textContent=(nb!==en?hint.textContent+" ":"")+"Prazo de "+bizDays(ini,v("e-end").value)+" dias úteis (sem sábado e domingo)."};
-  v("e-end").addEventListener("change",fixEnd);v("e-date").addEventListener("change",fixEnd);v("e-tag").addEventListener("change",fixEnd);
+    var nb=nextBiz(en),txt=nb!==en?"O prazo cai no fim de semana: ao salvar, vai para "+fmtLong(nb)+", até as "+HORA_FIM+". ":"";
+    hint.textContent=txt+"Prazo de "+bizDays(ini,nb)+" dias úteis (sem sábado e domingo)."};
+  ["e-date","e-end"].forEach(function(id){v(id).addEventListener("input",fixEnd);v(id).addEventListener("change",fixEnd);v(id).addEventListener("blur",fixEnd)});v("e-tag").addEventListener("change",fixEnd);
   f.querySelector("[data-c]").onclick=function(){endEdit();renderSide();renderToday(true)};
   var uploading=null,uploadCount=0;
   var sendFile=function(file){
@@ -546,6 +552,7 @@ function openEditor(e,card){
       resp:v("e-resp").value.trim(),idea:v("e-idea").value.trim(),obs:v("e-obs").value.trim(),anexo:v("e-anexo").value.trim().split(/\s+/).filter(Boolean).join(" ")};
     if(item.end&&workTask(item.date,item.end,item.tag))item.end=nextBiz(item.end);
     if(!item.title||!item.date){st.textContent="Preencha o título e a data.";return}
+    if(!okY(item.date)||(item.end&&!okY(item.end))){st.textContent="Use datas entre "+ANO_MIN+" e "+ANO_MAX+".";return}
     if(item.end&&item.end<item.date){st.textContent="A data final precisa ser depois da data inicial.";return}
     if(item.end===item.date)item.end="";
     histAdd("agv_hist_titulo",item.title);histAdd("agv_hist_resp",item.resp);
