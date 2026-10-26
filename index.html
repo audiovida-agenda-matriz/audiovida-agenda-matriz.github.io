@@ -223,6 +223,15 @@ h1,h1 .yr{color:#30aeb0}
 .actbtn.del{color:#b42318;border-color:#f3c7c3}
 .actbtn.del:hover{background:#fef3f2;border-color:#b42318}
 @media (max-width:620px){.today{padding:16px 16px 14px}.td-date{font-size:24px}}
+/* Histórico próprio (substitui o autocompletar do navegador) com X para excluir */
+.acwrap{position:relative}
+.aclist{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:20;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 28px -14px rgba(23,50,74,.45);list-style:none;margin:0;padding:4px;max-height:240px;overflow:auto}
+.aclist li{display:flex;align-items:center;gap:4px;border-radius:7px}
+.aclist li:hover,.aclist li.on{background:var(--surface-2)}
+.aclist .acpick{flex:1;min-width:0;border:0;background:none;text-align:left;font:600 14px var(--body);color:var(--fg);padding:8px 10px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aclist .acdel{flex:none;width:30px;height:30px;border:0;background:none;color:var(--muted);font-size:18px;line-height:1;border-radius:6px;cursor:pointer}
+.aclist .acdel:hover{background:#fef3f2;color:#b42318}
+.hint{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -290,12 +299,38 @@ var canEdit=function(){return !!(API&&auth.pin)};
 var color=function(t){return TAGC[t]||"#7f8c8d"};
 var short=function(k){var d=parse(k);return d.getDate()+"/"+MESES[d.getMonth()].slice(0,3).toLowerCase()};
 var isSpan=function(e){return e.end&&e.end>e.date};
+var isWknd=function(d){var w=d.getDay();return w===0||w===6};
+function nextBiz(k){var d=parse(k);while(isWknd(d))d.setDate(d.getDate()+1);return iso(d)}
+function bizDays(a,b){var d=parse(a),end=parse(b),n=0;while(d<=end&&n<1000){if(!isWknd(d))n++;d.setDate(d.getDate()+1)}return n}
+var HORA_FIM="18h";
+// Histórico de títulos/responsáveis guardado no navegador, com opção de excluir item a item
+function hist(k){try{var a=JSON.parse(store(k)||"[]");return Array.isArray(a)?a:[]}catch(e){return []}}
+function histAdd(k,v){v=String(v||"").trim();if(!v)return;var a=hist(k).filter(function(x){return x.toLowerCase()!==v.toLowerCase()});a.unshift(v);store(k,JSON.stringify(a.slice(0,30)))}
+function histDel(k,v){store(k,JSON.stringify(hist(k).filter(function(x){return x!==v})))}
+function attachHist(inp,k){
+  inp.setAttribute("autocomplete","off");inp.setAttribute("name","f"+Math.random().toString(36).slice(2));
+  var wrap=document.createElement("div");wrap.className="acwrap";inp.parentNode.insertBefore(wrap,inp);wrap.appendChild(inp);
+  var ul=document.createElement("ul");ul.className="aclist";ul.hidden=true;ul.setAttribute("role","listbox");wrap.appendChild(ul);
+  var show=function(){var q=inp.value.trim().toLowerCase();
+    var items=hist(k).filter(function(x){return !q||(x.toLowerCase().indexOf(q)>=0&&x.toLowerCase()!==q)}).slice(0,8);
+    ul.innerHTML="";if(!items.length){ul.hidden=true;return}
+    items.forEach(function(x){var li=document.createElement("li");
+      li.innerHTML='<button type="button" class="acpick"></button><button type="button" class="acdel" aria-label="Excluir do histórico" title="Excluir do histórico">×</button>';
+      li.querySelector(".acpick").textContent=x;
+      li.querySelector(".acpick").onmousedown=function(ev){ev.preventDefault();inp.value=x;ul.hidden=true};
+      li.querySelector(".acdel").onmousedown=function(ev){ev.preventDefault();histDel(k,x);show()};
+      ul.appendChild(li)});
+    ul.hidden=false};
+  inp.addEventListener("focus",show);inp.addEventListener("input",show);
+  inp.addEventListener("blur",function(){setTimeout(function(){ul.hidden=true},120)});
+  inp.addEventListener("keydown",function(ev){if(ev.key==="Escape")ul.hidden=true});
+}
 
 function apply(data){
   D=data;TAGC={};D.tags.forEach(function(t){TAGC[t.n]=/^#[0-9a-f]{6}$/i.test(t.color)?t.color:"#7f8c8d"});
   byDate={};var ys=[now.getFullYear()];
   D.datas.forEach(function(e){if(!/^\d{4}-\d\d-\d\d$/.test(e.date||""))return;ys.push(+e.date.slice(0,4));
-    if(isSpan(e)){var d=parse(e.date),end=parse(e.end),n=0;while(d<=end&&n<400){var k=iso(d);(byDate[k]=byDate[k]||[]).push(e);d.setDate(d.getDate()+1);n++}}
+    if(isSpan(e)){var d=parse(e.date),end=parse(e.end),n=0;while(d<=end&&n<400){if(!isWknd(d)){var k=iso(d);(byDate[k]=byDate[k]||[]).push(e)}d.setDate(d.getDate()+1);n++}}
     else (byDate[e.date]=byDate[e.date]||[]).push(e)});
   Object.keys(byDate).forEach(function(k){byDate[k].sort(function(a,b){return (a.tag==="Aniversários da equipe")-(b.tag==="Aniversários da equipe")||String(a.title).localeCompare(String(b.title))})});
   YMIN=Math.min.apply(null,ys);YMAX=Math.max.apply(null,ys);
@@ -391,7 +426,7 @@ function renderSide(){
   if(!evs.length){var p=document.createElement("p");p.className="empty";p.textContent=canEdit()?"Sem data cadastrada neste dia.":"Sem data cadastrada neste dia. Para incluir, toque em ✎ Modo edição.";body.appendChild(p)}
   evs.forEach(function(e){var c=document.createElement("div");c.className="evcard";c.style.borderColor=color(e.tag);
     var h='<span class="k" style="color:'+color(e.tag)+'">'+esc(e.tag||"Sem tag")+'</span><span class="ti">'+esc(e.title)+'</span>';
-    if(isSpan(e))h+='<span class="per">Período: '+short(e.date)+' a '+short(e.end)+'</span>';
+    if(isSpan(e))h+='<span class="per">Prazo: '+short(e.date)+' a '+short(e.end)+' até as '+HORA_FIM+' · '+bizDays(e.date,e.end)+' dias úteis</span>';
     if(e.idea)h+='<span class="idea"><b>Pauta:</b> '+esc(e.idea)+'</span>';
     var dl='';
     if(e.status)dl+='<dt>Status</dt><dd><span class="stat">'+esc(e.status)+'</span></dd>';
@@ -399,7 +434,6 @@ function renderSide(){
     if(e.obs)dl+='<dt>Observações</dt><dd>'+esc(e.obs)+'</dd>';
     if(e.anexo){dl+='<dt>Anexo</dt><dd>'+String(e.anexo).split(/\s+/).filter(Boolean).map(function(u){return /^https?:\/\//i.test(u)?'<a href="'+esc(u)+'" target="_blank" rel="noopener">Abrir anexo ↗</a>':esc(u)}).join("<br>")+'</dd>'}
     if(dl)h+='<dl class="det">'+dl+'</dl>';
-    if(e.editado)h+='<span class="who">Última edição: '+esc(e.editado)+'</span>';
     c.innerHTML=h;
     if(canEdit()&&e.id)c.appendChild(actions(e,c));
     body.appendChild(c)});
@@ -424,7 +458,7 @@ function renderToday(force){
   if(!evs.length){var p=document.createElement("p");p.className="td-empty";p.textContent="Não há nenhuma data cadastrada para hoje.";body.appendChild(p)}
   evs.forEach(function(e){var c=document.createElement("div");c.className="td-card";c.style.borderLeftColor=color(e.tag);
     var h='<span class="k" style="color:'+color(e.tag)+'">'+esc(e.tag||"Sem tag")+'</span><span class="ti">'+esc(e.title)+'</span>';
-    if(isSpan(e))h+='<span class="per">Período: '+short(e.date)+' a '+short(e.end)+'</span>';
+    if(isSpan(e))h+='<span class="per">Prazo: '+short(e.date)+' a '+short(e.end)+' até as '+HORA_FIM+' · '+bizDays(e.date,e.end)+' dias úteis</span>';
     if(e.idea)h+='<span class="idea">'+esc(e.idea)+'</span>';
     var meta=[];if(e.status)meta.push('<span class="stat">'+esc(e.status)+'</span>');if(e.resp)meta.push('Responsável: '+esc(e.resp));
     if(meta.length)h+='<span class="td-meta">'+meta.join(' · ')+'</span>';
@@ -441,10 +475,11 @@ function openEditor(e,card){
   var f=document.createElement("form");f.className="edform";
   var tagOpts=D.tags.map(function(t){return '<option>'+esc(t.n)+'</option>'}).join("")+'<option value="">Sem tag</option>';
   var stOpts=STATUS.map(function(s){return '<option>'+s+'</option>'}).join("");
-  f.innerHTML='<label for="e-title">Título</label><input id="e-title" type="text" maxlength="200" required>'+
-    '<div class="two"><div><label for="e-date">Data</label><input id="e-date" type="date" required></div><div><label for="e-end">Até (opcional, campanhas)</label><input id="e-end" type="date"></div></div>'+
+  f.innerHTML='<label for="e-title">Título</label><input id="e-title" type="text" maxlength="200" required autocomplete="off">'+
+    '<div class="two"><div><label for="e-date">Data</label><input id="e-date" type="date" required></div><div><label for="e-end">Prazo / até (opcional)</label><input id="e-end" type="date"></div></div>'+
+    '<span class="hint" id="e-hint">Sábado e domingo são pulados: prazo que cair no fim de semana vai para a segunda. Expediente: 9h às 18h.</span>'+
     '<div class="two"><div><label for="e-tag">Tag</label><select id="e-tag">'+tagOpts+'</select></div><div><label for="e-status">Status</label><select id="e-status">'+stOpts+'</select></div></div>'+
-    '<label for="e-resp">Responsável</label><input id="e-resp" type="text" maxlength="80">'+
+    '<label for="e-resp">Responsável</label><input id="e-resp" type="text" maxlength="80" autocomplete="off">'+
     '<label for="e-idea">Pauta / descrição</label><textarea id="e-idea" maxlength="3000"></textarea>'+
     '<label for="e-obs">Observações / solicitações</label><textarea id="e-obs" maxlength="5000"></textarea>'+
     '<label for="e-anexo">Anexos (links, um por linha)</label><textarea id="e-anexo" maxlength="2000" style="min-height:44px"></textarea>'+
@@ -455,6 +490,12 @@ function openEditor(e,card){
   v("e-tag").value=e?(TAGC[e.tag]?e.tag:""):(D.tags[0]?D.tags[0].n:"");v("e-status").value=e&&STATUS.indexOf(e.status)>=0?e.status:"A fazer";
   v("e-resp").value=e?e.resp||"":"";v("e-idea").value=e?e.idea||"":"";v("e-obs").value=e?e.obs||"":"";v("e-anexo").value=e?String(e.anexo||"").split(/\s+/).filter(Boolean).join("\n"):"";
   var st=f.querySelector(".status");
+  f.setAttribute("autocomplete","off");
+  attachHist(v("e-title"),"agv_hist_titulo");attachHist(v("e-resp"),"agv_hist_resp");
+  var fixEnd=function(){var en=v("e-end").value,hint=f.querySelector("#e-hint");if(!en)return;
+    var nb=nextBiz(en);if(nb!==en){v("e-end").value=nb;hint.textContent="O prazo caía no fim de semana e foi para "+fmtLong(nb)+", até as "+HORA_FIM+"."}
+    var ini=v("e-date").value;if(ini&&v("e-end").value>ini)hint.textContent=(nb!==en?hint.textContent+" ":"")+"Prazo de "+bizDays(ini,v("e-end").value)+" dias úteis (sem sábado e domingo)."};
+  v("e-end").addEventListener("change",fixEnd);v("e-date").addEventListener("change",fixEnd);
   f.querySelector("[data-c]").onclick=function(){editing=false;renderSide();renderToday(true)};
   v("e-file").onchange=function(){var file=this.files[0];if(!file)return;
     if(file.size>15*1024*1024){st.textContent="O arquivo passa de 15 MB. Envie pelo Google Drive e cole o link.";this.value="";return}
@@ -471,9 +512,11 @@ function openEditor(e,card){
   f.onsubmit=function(ev){ev.preventDefault();
     var item={id:e?e.id:"",title:v("e-title").value.trim(),date:v("e-date").value,end:v("e-end").value,tag:v("e-tag").value,status:v("e-status").value,
       resp:v("e-resp").value.trim(),idea:v("e-idea").value.trim(),obs:v("e-obs").value.trim(),anexo:v("e-anexo").value.trim().split(/\s+/).filter(Boolean).join(" ")};
+    if(item.end)item.end=nextBiz(item.end);
     if(!item.title||!item.date){st.textContent="Preencha o título e a data.";return}
     if(item.end&&item.end<item.date){st.textContent="A data final precisa ser depois da data inicial.";return}
     if(item.end===item.date)item.end="";
+    histAdd("agv_hist_titulo",item.title);histAdd("agv_hist_resp",item.resp);
     st.textContent="Salvando…";f.querySelector("[type=submit]").disabled=true;
     post({action:"save",item:item}).then(function(){editing=false;renderToday(true);select(item.date)}).catch(function(err){st.textContent=msg(err);f.querySelector("[type=submit]").disabled=false})};
   if(card)card.replaceWith(f);else{var body=$("sbody");body.insertBefore(f,body.firstChild);var add=body.querySelector(".btn.ghost:last-child");if(add&&add!==f)add.hidden=true}
@@ -499,7 +542,7 @@ function post(body,keep){
     if(res.data&&!keep){apply(res.data);stamp()}
     return res})
 }
-function stamp(){$("sync").textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
+function stamp(){$("sync").textContent=""}
 function load(manual){
   if(!API){$("sync").textContent="";return}
   if(editing&&!manual)return;
